@@ -26,9 +26,8 @@ CREATE TABLE Health_Declaration (
     date DATE,
     eid INTEGER,
     temp FLOAT(1),
-    fever BOOLEAN,
-
-    PRIMARY KEY (date, eid),
+    fever BOOLEAN GENERATED ALWAYS AS (temp > 37.5) STORED, --derived attribute
+    PRIMARY KEY (date, eid)
     FOREIGN KEY (eid) REFERENCES Employees
 );
 
