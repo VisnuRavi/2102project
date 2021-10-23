@@ -3,13 +3,24 @@ DROP TABLE IF EXISTS Employees, Contact_Numbers, Junior, Booker, Senior, Manager
 
 DROP TYPE IF EXISTS KIND CASCADE;
 
+-- Basic functions
+DROP FUNCTION IF EXISTS add_department(TEXT), 
+    add_employee(TEXT, TEXT, KIND, TEXT) CASCADE;
+
+-- Core functions
+DROP FUNCTION IF EXISTS search_room(INTEGER, DATE, TIME, TIME) CASCADE;
+
 SET timezone = 'America/Los_Angeles';
+
+-- #############################
+--       Custom Data Types
+-- #############################
+
+CREATE TYPE KIND AS ENUM ('Junior', 'Senior', 'Manager');
 
 -- ##################
 --       Tables
 -- ##################
-
-CREATE TYPE KIND AS ENUM ('Junior', 'Senior', 'Manager');
 
 CREATE TABLE Departments (
     did SERIAL PRIMARY KEY,
@@ -79,6 +90,7 @@ CREATE TABLE Meeting_Rooms (
     room TEXT,
     floor INTEGER,
     rname TEXT,
+    capacity INTEGER,
 
     PRIMARY KEY (room, floor),
     FOREIGN KEY (did) REFERENCES Departments
@@ -97,7 +109,7 @@ CREATE TABLE Updates (
 ); 
 
 CREATE TABLE Sessions (
-    time TIMESTAMP,
+    time TIME,
     date DATE,
     room TEXT,
     floor INTEGER,
@@ -112,7 +124,7 @@ CREATE TABLE Joins (
     eid INTEGER,
     room TEXT,
     floor INTEGER,
-    time TIMESTAMP,
+    time TIME,
     date DATE,
     
     FOREIGN KEY (time, date, room, floor) REFERENCES Sessions,
@@ -167,9 +179,27 @@ $$ LANGUAGE plpgsql;
 --         Core Functions
 -- #############################
 
-CREATE OR REPLACE FUNCTION add_department(dname TEXT) RETURNS VOID AS $$
+CREATE OR REPLACE FUNCTION search_room(qcapacity INTEGER, qdate DATE, start_hour TIME, end_hour TIME) RETURNS TABLE (
+    did INTEGER,
+    room TEXT,
+    floor INTEGER,
+    rname TEXT,
+    capacity INTEGER
+) AS $$
     BEGIN
-        INSERT INTO Departments (dname) VALUES (dname);
+        RETURN QUERY
+        SELECT mr.did, mr.room, mr.floor, mr.rname, mr.capacity
+        FROM Sessions s INNER JOIN Meeting_Rooms mr ON s.room = mr.room AND s.floor = mr.floor
+        WHERE qcapacity > mr.capacity
+            AND qdate = s.date
+        EXCEPT
+        -- Rooms that have sessions on the given date and within the range
+        SELECT mr.did, mr.room, mr.floor, mr.rname, mr.capacity
+        FROM Sessions s INNER JOIN Meeting_Rooms mr ON s.room = mr.room AND s.floor = mr.floor
+        WHERE qcapacity > mr.capacity
+            AND qdate = s.date
+            AND s.time >= start_hour
+            AND s.time < end_hour;
     END;
 $$ LANGUAGE plpgsql;
 
