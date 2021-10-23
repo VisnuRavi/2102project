@@ -91,6 +91,8 @@ CREATE OR REPLACE FUNCTION search_room(qcapacity INTEGER, qdate DATE, start_hour
 $$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE PROCEDURE unbook_room(_floor INTEGER, _room INTEGER, _date DATE, _time TIMESTAMP, _booker_eid INTEGER) AS $$
+    DECLARE
+        session_deleted INTEGER = NULL;
     BEGIN
         DELETE FROM Sessions s
         WHERE s.floor = _floor AND
@@ -98,7 +100,13 @@ CREATE OR REPLACE PROCEDURE unbook_room(_floor INTEGER, _room INTEGER, _date DAT
         s.date = _date AND
         s.time = _time AND
         s.booker_eid = _booker_eid; -- Ensure only booker can unbook
+
+        SELECT @@rowcount INTO session_deleted;
+        IF session_deleted <= 0 THEN
+            RAISE EXCEPTION 'No meeting found or unauthorised unbooking';
+        END IF; 
         
+        -- Remove all employees associated with the session
         DELETE FROM Joins j
         WHERE j.floor = _floor AND
         j.room = _room AND
