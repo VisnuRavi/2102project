@@ -93,12 +93,10 @@ CREATE TABLE Updates (
     date DATE,
     room INTEGER,
     floor INTEGER,
-    eid INTEGER,
     new_cap INTEGER,
 
-    PRIMARY KEY (date, room, floor, eid),
-    FOREIGN KEY (room, floor) REFERENCES Meeting_Rooms,
-    FOREIGN KEY (eid) REFERENCES Manager
+    PRIMARY KEY (date, room, floor),
+    FOREIGN KEY (room, floor) REFERENCES Meeting_Rooms
 ); 
 
 CREATE TABLE Sessions (
@@ -107,7 +105,7 @@ CREATE TABLE Sessions (
     room INTEGER,
     floor INTEGER,
     booker_eid INTEGER,
-    approver_eid INTEGER DEFAULT NULL, --approver eid needs to be a manager or null
+    approver_eid INTEGER DEFAULT NULL,
  
     PRIMARY KEY (time, date, room, floor),
     FOREIGN KEY (room, floor) REFERENCES Meeting_Rooms,
@@ -126,3 +124,7 @@ CREATE TABLE Joins (
     FOREIGN KEY (time, date, room, floor) REFERENCES Sessions,
     FOREIGN KEY (eid) REFERENCES Employees
 ); 
+
+-- ##################
+--       Triggers
+-- ##################

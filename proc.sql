@@ -19,10 +19,18 @@ CREATE OR REPLACE FUNCTION add_department(dname TEXT) RETURNS VOID AS $$
     END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE PROCEDURE add_room(floor INTEGER, room INTEGER, rname TEXT, capacity INTEGER) AS $$
+CREATE OR REPLACE PROCEDURE add_room(did INTEGER, floor INTEGER, room INTEGER, rname TEXT, capacity INTEGER) AS $$
     BEGIN
-        INSERT INTO Meeting_Rooms (room, floor, rname, capacity) VALUES (room, floor, rname, capacity);
+        --rather than capacity being updated here, it should be updated in UPDATES table
+        INSERT INTO Meeting_Rooms(did, room, floor, rname, capacity) VALUES (did, room, floor, rname, capacity);
+        CALL entry_in_updates(room, floor, capacity);
     END
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE PROCEDURE entry_in_updates(IN newroom INTEGER, IN newfloor INTEGER, IN newcap INTEGER) AS $$      
+    BEGIN
+        INSERT INTO Updates (date,room,floor,new_cap) VALUES (CURRENT_DATE, newroom, newfloor, newcap);
+    END;
 $$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION add_employee(ename TEXT, contact_number TEXT, kind KIND, department_name TEXT) RETURNS VOID AS $$
@@ -61,6 +69,29 @@ CREATE OR REPLACE FUNCTION add_employee(ename TEXT, contact_number TEXT, kind KI
         END CASE;
     END;
 $$ LANGUAGE plpgsql;
+
+
+CREATE OR REPLACE PROCEDURE change_capacity (IN inroom INTEGER, IN infloor INTEGER, IN ncap INTEGER, IN indate DATE, IN manager_eid INTEGER) AS $$
+    DECLARE
+        room_dept INTEGER = NULL;
+    BEGIN
+        --get room_dept (did)
+        SELECT did INTO room_dept FROM Meeting_Rooms mr WHERE mr.room = inroom AND mr.floor = infloor;
+        --valid manager
+        IF (manager_eid NOT IN (SELECT eid FROM Manager)) THEN
+            RAISE EXCEPTION 'Only Managers are allowed to update capacity';
+        ELSEIF (manager_eid NOT IN (SELECT emps.eid FROM Employees emps, Manager mngs 
+                                WHERE emps.eid = mngs.eid AND emps.did = room_dept)) THEN
+            RAISE EXCEPTION 'Ensure Manager is from same department as the room ';
+        ELSE
+            --update capacity and date in Meeting_rooms
+            UPDATE Updates
+            SET new_cap = ncap, date = indate
+            WHERE (floor = infloor AND room = inroom);
+        END IF;
+    END;
+$$ LANGUAGE plpgsql;
+
 
 -- #############################
 --         Core Functions

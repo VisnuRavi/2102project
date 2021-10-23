@@ -195,3 +195,17 @@ INSERT INTO Manager VALUES
 (305),
 (307),
 (309);
+
+
+INSERT INTO Meeting_Rooms VALUES
+(900, 0, 0, 'bigroom', 10),
+(900, 1, 0, 'smallroom', 10),
+(901, 0, 1, 'bigroom', 10),
+(901, 1, 1, 'smallroom', 10),
+(902, 0, 2, 'bigroom', 10),
+(902, 1, 2, 'smallroom', 10),
+(903, 0, 3, 'bigroom', 10),
+(903, 1, 3, 'smallroom', 10),
+(904, 0, 4, 'bigroom', 10),
+(904, 1, 4, 'smallroom', 10);
+
