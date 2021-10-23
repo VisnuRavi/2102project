@@ -76,9 +76,10 @@ CREATE TABLE Manager (
 
 CREATE TABLE Meeting_Rooms (
     did INTEGER,
-    room TEXT,
+    room INTEGER,
     floor INTEGER,
     rname TEXT,
+    capacity INTEGER,
 
     PRIMARY KEY (room, floor),
     FOREIGN KEY (did) REFERENCES Departments
@@ -86,7 +87,7 @@ CREATE TABLE Meeting_Rooms (
 
 CREATE TABLE Updates (
     date DATE,
-    room TEXT,
+    room INTEGER,
     floor INTEGER,
     eid INTEGER,
     new_cap INTEGER,
@@ -99,18 +100,20 @@ CREATE TABLE Updates (
 CREATE TABLE Sessions (
     time TIMESTAMP,
     date DATE,
-    room TEXT,
+    room INTEGER,
     floor INTEGER,
     booker_eid INTEGER,
+    approver_eid INTEGER,
 
     PRIMARY KEY (time, date, room, floor),
     FOREIGN KEY (room, floor) REFERENCES Meeting_Rooms,
-    FOREIGN KEY (booker_eid) REFERENCES Booker (eid)
+    FOREIGN KEY (booker_eid) REFERENCES Booker (eid),
+    FOREIGN KEY (approver_eid) REFERENCES Manager (eid)
 );
 
 CREATE TABLE Joins (
     eid INTEGER,
-    room TEXT,
+    room INTEGER,
     floor INTEGER,
     time TIMESTAMP,
     date DATE,
@@ -118,69 +121,3 @@ CREATE TABLE Joins (
     FOREIGN KEY (time, date, room, floor) REFERENCES Sessions,
     FOREIGN KEY (eid) REFERENCES Employees
 ); 
-
--- ###########################
---        Basic Functions
--- ###########################
-
-CREATE OR REPLACE FUNCTION add_department(dname TEXT) RETURNS VOID AS $$
-    BEGIN
-        INSERT INTO Departments (dname) VALUES (dname);
-    END;
-$$ LANGUAGE plpgsql;
-
-CREATE OR REPLACE FUNCTION add_employee(ename TEXT, contact_number TEXT, kind KIND, department_name TEXT) RETURNS VOID AS $$
-    DECLARE
-        created_eid INTEGER;
-        created_email TEXT;
-        matching_did INTEGER = NULL;
-    BEGIN
-        -- Find the did based on given department name
-        SELECT did FROM Departments WHERE dname = department_name INTO matching_did;
-        IF matching_did IS NULL THEN 
-            RAISE EXCEPTION 'No such department with the name %', department_name;
-        END IF;
-
-        -- Temporarily set email to be NULL as we require the auto-generated eid to create email
-        INSERT INTO Employees(ename, email, did, resigned_date) 
-        VALUES (ename, NULL, matching_did, NULL) 
-        RETURNING eid INTO created_eid;
-
-        -- Create and set email by concatenating name and eid (guaranteed to be unique)
-        created_email = CONCAT(ename, created_eid::TEXT, '@company.com');
-        UPDATE Employees SET email = created_email WHERE eid = created_eid;
-
-        -- Insert into respective subtable based on kind
-        -- TODO: Do we need to insert into Booker as well?
-        CASE 
-            WHEN kind = 'Junior' THEN
-                INSERT INTO Junior VALUES (created_eid);
-            WHEN kind = 'Senior' THEN
-                INSERT INTO Senior VALUES (created_eid);
-            WHEN kind = 'Manager' THEN
-                INSERT INTO Manager VALUES (created_eid);
-        END CASE;
-    END;
-$$ LANGUAGE plpgsql;
-
--- #############################
---         Core Functions
--- #############################
-
-CREATE OR REPLACE FUNCTION add_department(dname TEXT) RETURNS VOID AS $$
-    BEGIN
-        INSERT INTO Departments (dname) VALUES (dname);
-    END;
-$$ LANGUAGE plpgsql;
-
--- #############################
---        Health Functions
--- #############################
-
-
-
-
-
--- #############################
---        Admin Functions
--- #############################
