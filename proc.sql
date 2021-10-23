@@ -46,6 +46,9 @@ CREATE OR REPLACE FUNCTION add_employee(ename TEXT, contact_number TEXT, kind KI
         created_email = CONCAT(ename, created_eid::TEXT, '@company.com');
         UPDATE Employees SET email = created_email WHERE eid = created_eid;
 
+        -- Insert contact number into separate table (since an employee can have multiple)
+        INSERT INTO Contact_Numbers values(created_eid, contact_number);
+
         -- Insert into respective subtable based on kind
         -- TODO: Do we need to insert into Booker as well?
         CASE 
@@ -62,6 +65,7 @@ $$ LANGUAGE plpgsql;
 -- #############################
 --         Core Functions
 -- #############################
+
 CREATE OR REPLACE FUNCTION search_room(qcapacity INTEGER, qdate DATE, start_hour TIME, end_hour TIME) RETURNS TABLE (
     did INTEGER,
     room TEXT,

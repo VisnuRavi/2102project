@@ -5,11 +5,15 @@ DROP TYPE IF EXISTS KIND CASCADE;
 
 SET timezone = 'America/Los_Angeles';
 
+-- #############################
+--       Custom Data Types
+-- #############################
+
+CREATE TYPE KIND AS ENUM ('Junior', 'Senior', 'Manager');
+
 -- ##################
 --       Tables
 -- ##################
-
-CREATE TYPE KIND AS ENUM ('Junior', 'Senior', 'Manager');
 
 CREATE TABLE Departments (
     did SERIAL PRIMARY KEY,
@@ -21,7 +25,7 @@ CREATE TABLE Employees (
     ename TEXT,
     email TEXT,
     did INTEGER,
-    resigned_date DATE,
+    resigned_date DATE DEFAULT NULL,
 
     FOREIGN KEY (did) REFERENCES Departments
 );
@@ -30,8 +34,7 @@ CREATE TABLE Health_Declaration (
     date DATE,
     eid INTEGER,
     temp FLOAT(1),
-    fever BOOLEAN,
-
+    fever BOOLEAN GENERATED ALWAYS AS (temp > 37.5) STORED, --derived attribute
     PRIMARY KEY (date, eid),
     FOREIGN KEY (eid) REFERENCES Employees
 );
@@ -58,6 +61,7 @@ CREATE TABLE Booker (
 
     PRIMARY KEY (eid),
     FOREIGN KEY (eid) REFERENCES Employees ON DELETE CASCADE
+    --non juniors only!
 );
 
 CREATE TABLE Senior (
@@ -98,24 +102,25 @@ CREATE TABLE Updates (
 ); 
 
 CREATE TABLE Sessions (
-    time TIMESTAMP,
+    time TIME,
     date DATE,
     room INTEGER,
     floor INTEGER,
     booker_eid INTEGER,
-    approver_eid INTEGER,
-
+    approver_eid INTEGER DEFAULT NULL, --approver eid needs to be a manager or null
+ 
     PRIMARY KEY (time, date, room, floor),
     FOREIGN KEY (room, floor) REFERENCES Meeting_Rooms,
     FOREIGN KEY (booker_eid) REFERENCES Booker (eid),
     FOREIGN KEY (approver_eid) REFERENCES Manager (eid)
+  
 );
 
 CREATE TABLE Joins (
     eid INTEGER,
     room INTEGER,
     floor INTEGER,
-    time TIMESTAMP,
+    time TIME,
     date DATE,
     
     FOREIGN KEY (time, date, room, floor) REFERENCES Sessions,
