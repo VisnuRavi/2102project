@@ -1,4 +1,3 @@
-
 DROP TABLE IF EXISTS Employees, Contact_Numbers, Junior, Booker, Senior, Manager, Departments, Meeting_Rooms, 
     Health_Declaration, Updates, Sessions, Joins CASCADE;
 
