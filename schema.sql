@@ -35,7 +35,7 @@ CREATE TABLE Health_Declaration (
     eid INTEGER,
     temp FLOAT(1),
     fever BOOLEAN GENERATED ALWAYS AS (temp > 37.5) STORED, --derived attribute
-    PRIMARY KEY (date, eid)
+    PRIMARY KEY (date, eid),
     FOREIGN KEY (eid) REFERENCES Employees
 );
 
@@ -80,7 +80,7 @@ CREATE TABLE Manager (
 
 CREATE TABLE Meeting_Rooms (
     did INTEGER,
-    room TEXT,
+    room INTEGER,
     floor INTEGER,
     rname TEXT,
     capacity INTEGER,
@@ -91,7 +91,7 @@ CREATE TABLE Meeting_Rooms (
 
 CREATE TABLE Updates (
     date DATE,
-    room TEXT,
+    room INTEGER,
     floor INTEGER,
     eid INTEGER,
     new_cap INTEGER,
@@ -104,10 +104,10 @@ CREATE TABLE Updates (
 CREATE TABLE Sessions (
     time TIME,
     date DATE,
-    room TEXT,
+    room INTEGER,
     floor INTEGER,
     booker_eid INTEGER,
-    approver_eid INTEGER DEFAULT NULL --approver eid needs to be a manager or null
+    approver_eid INTEGER DEFAULT NULL, --approver eid needs to be a manager or null
  
     PRIMARY KEY (time, date, room, floor),
     FOREIGN KEY (room, floor) REFERENCES Meeting_Rooms,
@@ -118,7 +118,7 @@ CREATE TABLE Sessions (
 
 CREATE TABLE Joins (
     eid INTEGER,
-    room TEXT,
+    room INTEGER,
     floor INTEGER,
     time TIME,
     date DATE,
