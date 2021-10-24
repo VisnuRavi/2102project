@@ -84,10 +84,15 @@ CREATE OR REPLACE PROCEDURE change_capacity (IN inroom INTEGER, IN infloor INTEG
                                 WHERE emps.eid = mngs.eid AND emps.did = room_dept)) THEN
             RAISE EXCEPTION 'Ensure Manager is from same department as the room ';
         ELSE
+            /*
             --update capacity and date in Meeting_rooms
             UPDATE Updates
             SET new_cap = ncap, date = indate
             WHERE (floor = infloor AND room = inroom);
+            */
+
+            --add a new entry to updates table, reflecting change in room's capacity
+            INSERT INTO Updates (date,room,floor,new_cap) VALUES (indate, inroom, infloor, ncap);
         END IF;
     END;
 $$ LANGUAGE plpgsql;
@@ -197,6 +202,7 @@ CREATE OR REPLACE PROCEDURE  approve_meeting(_floor INTEGER, _room INTEGER, _dat
             IF a_eid IS NOT NULL THEN
                 RAISE EXCEPTION 'Meeting already approved'; 
             ELSE
+                --TODO: check date
                 --approve meeting
                 UPDATE Sessions
                 SET approver_eid = _eid
@@ -209,6 +215,10 @@ CREATE OR REPLACE PROCEDURE  approve_meeting(_floor INTEGER, _room INTEGER, _dat
         END IF;
     END;
 $$ LANGUAGE plpgsql;
+
+
+
+
 -- #############################
 --        Health Functions
 -- #############################
