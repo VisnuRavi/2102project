@@ -104,7 +104,7 @@ CREATE TABLE Sessions (
     date DATE,
     room INTEGER,
     floor INTEGER,
-    booker_eid INTEGER,
+    booker_eid INTEGER NOT NULL, --sessions cannot be created without a booker
     approver_eid INTEGER DEFAULT NULL,
  
     PRIMARY KEY (time, date, room, floor),
