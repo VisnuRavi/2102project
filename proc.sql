@@ -19,6 +19,12 @@ CREATE OR REPLACE FUNCTION add_department(dname TEXT) RETURNS VOID AS $$
     END;
 $$ LANGUAGE plpgsql;
 
+
+CREATE OR REPLACE PROCEDURE remove_department(dname TEXT) AS $$
+    DELETE FROM Departments WHERE dname = dname;
+$$ LANGUAGE sql;
+
+
 CREATE OR REPLACE PROCEDURE add_room(did INTEGER, floor INTEGER, room INTEGER, rname TEXT, capacity INTEGER) AS $$
     BEGIN
         --rather than capacity being updated here, it should be updated in UPDATES table
@@ -27,11 +33,13 @@ CREATE OR REPLACE PROCEDURE add_room(did INTEGER, floor INTEGER, room INTEGER, r
     END
 $$ LANGUAGE plpgsql;
 
+
 CREATE OR REPLACE PROCEDURE entry_in_updates(IN newroom INTEGER, IN newfloor INTEGER, IN newcap INTEGER) AS $$      
     BEGIN
         INSERT INTO Updates (date,room,floor,new_cap) VALUES (CURRENT_DATE, newroom, newfloor, newcap);
     END;
 $$ LANGUAGE plpgsql;
+
 
 CREATE OR REPLACE FUNCTION add_employee(ename TEXT, contact_number TEXT, kind KIND, did INTEGER) RETURNS VOID AS $$
     DECLARE
@@ -115,6 +123,7 @@ CREATE OR REPLACE FUNCTION search_room(qcapacity INTEGER, qdate DATE, start_hour
     END;
 $$ LANGUAGE plpgsql;
 
+
 CREATE OR REPLACE PROCEDURE unbook_room(_floor INTEGER, _room INTEGER, _date DATE, _time TIMESTAMP, _booker_eid INTEGER) AS $$
     DECLARE
         session_deleted INTEGER = NULL;
@@ -139,6 +148,7 @@ CREATE OR REPLACE PROCEDURE unbook_room(_floor INTEGER, _room INTEGER, _date DAT
         j.time = _time;
     END;
 $$ LANGUAGE plpgsql;
+
 
 CREATE OR REPLACE PROCEDURE leave_meeting(_floor INTEGER, _room INTEGER, _date DATE, _time TIMESTAMP, _eid INTEGER) AS $$
     DECLARE
@@ -165,6 +175,7 @@ CREATE OR REPLACE PROCEDURE leave_meeting(_floor INTEGER, _room INTEGER, _date D
         eid = _eid; 
     END;
 $$ LANGUAGE plpgsql;
+
 
 CREATE OR REPLACE PROCEDURE  approve_meeting(_floor INTEGER, _room INTEGER, _date DATE, _time TIME, _eid INTEGER) AS $$
     DECLARE

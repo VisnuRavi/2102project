@@ -20,6 +20,7 @@ CREATE TABLE Departments (
     dname TEXT
 ); 
 
+
 CREATE TABLE Employees (
     eid SERIAL PRIMARY KEY,
     ename TEXT,
@@ -29,6 +30,7 @@ CREATE TABLE Employees (
 
     FOREIGN KEY (did) REFERENCES Departments
 );
+
 
 CREATE TABLE Health_Declaration (
     date DATE,
@@ -56,6 +58,7 @@ CREATE TABLE Junior (
     FOREIGN KEY (eid) REFERENCES Employees ON DELETE CASCADE
 );  
 
+
 CREATE TABLE Booker (
     eid INTEGER,
 
@@ -64,6 +67,7 @@ CREATE TABLE Booker (
     --non juniors only!
 );
 
+
 CREATE TABLE Senior (
     eid INTEGER,
 
@@ -71,12 +75,14 @@ CREATE TABLE Senior (
     FOREIGN KEY (eid) REFERENCES Booker ON DELETE CASCADE
 ); 
 
+
 CREATE TABLE Manager (
     eid INTEGER,
 
     PRIMARY KEY (eid),
     FOREIGN KEY (eid) REFERENCES Booker ON DELETE CASCADE
 ); 
+
 
 CREATE TABLE Meeting_Rooms (
     did INTEGER,
@@ -89,6 +95,7 @@ CREATE TABLE Meeting_Rooms (
     FOREIGN KEY (did) REFERENCES Departments
 ); 
 
+
 CREATE TABLE Updates (
     date DATE,
     room INTEGER,
@@ -98,6 +105,7 @@ CREATE TABLE Updates (
     PRIMARY KEY (date, room, floor),
     FOREIGN KEY (room, floor) REFERENCES Meeting_Rooms
 ); 
+
 
 CREATE TABLE Sessions (
     time TIME,
@@ -111,8 +119,8 @@ CREATE TABLE Sessions (
     FOREIGN KEY (room, floor) REFERENCES Meeting_Rooms,
     FOREIGN KEY (booker_eid) REFERENCES Booker (eid),
     FOREIGN KEY (approver_eid) REFERENCES Manager (eid)
-  
 );
+
 
 CREATE TABLE Joins (
     eid INTEGER,
