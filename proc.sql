@@ -134,6 +134,39 @@ CREATE OR REPLACE FUNCTION search_room(qcapacity INTEGER, qdate DATE, start_hour
 $$ LANGUAGE plpgsql;
 
 
+CREATE OR REPLACE PROCEDUTE book_room(_floor INTEGER, _room INTEGER, _date DATE, _start_hour TIME, _end_hour TIME, _booker_eid INTEGER) AS $$
+    DECLARE
+        room_available INTEGER;
+        is_booker INTEGER;
+        current_hour TIME := _start_hour;
+    BEGIN
+        --this also handles when cap=0, as search room will give rooms with cap>0
+        SELECT COUNT(*) INTO room_available 
+        FROM search_room(0, _date, _start_hour, _end_hour) 
+        WHERE floor = _floor AND room = _room;
+
+        IF (room_available > 0) THEN
+            SELECT COUNT(*) INTO is_booker
+            FROM Booker
+            WHERE eid = _booker_eid;
+            
+            IF (is_booker) > 0 THEN
+                WHILE current_hour < _end_hour LOOP
+                    INSERT INTO Sessions VALUES (current_hour, _date, _room, _floor, _booker_eid);
+                    current_hour := current_hour + INTERVAL '1 hour';
+                END LOOP;
+                
+                SELECT join_meeting(_floor, _room, _date, _start_hour, _end_hour, _booker_eid);
+            ELSE
+                RAISE EXCEPTION 'Only a booker can book a meeting room';
+        ELSE
+            RAISE EXCEPTION 'Meeting room is unavailable';
+        END IF;
+    END;
+$$ LANGUAGE plpgsql;
+
+
+
 CREATE OR REPLACE PROCEDURE unbook_room(_floor INTEGER, _room INTEGER, _date DATE, _time TIMESTAMP, _booker_eid INTEGER) AS $$
     DECLARE
         session_deleted INTEGER = NULL;
