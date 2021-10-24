@@ -136,3 +136,20 @@ CREATE TABLE Joins (
 -- ##################
 --       Triggers
 -- ##################
+CREATE OR REPLACE FUNCTION max_contact_numbers()
+RETURNS TRIGGER AS $$
+DECLARE
+    contact_numbers INTEGER;
+BEGIN
+    SELECT COUNT(*) INTO contact_numbers FROM Contact_Numbers WHERE eid = NEW.eid;
+    IF (contact_numbers = 3) THEN 
+        RETURN NULL;
+    ELSE
+        RETURN NEW;
+    END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER max_contact_numbers
+BEFORE INSERT on Contact_Numbers
+FOR EACH ROW EXECUTE FUNCTION max_contact_numbers(); 
