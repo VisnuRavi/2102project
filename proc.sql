@@ -33,19 +33,14 @@ CREATE OR REPLACE PROCEDURE entry_in_updates(IN newroom INTEGER, IN newfloor INT
     END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION add_employee(ename TEXT, contact_number TEXT, kind KIND, _did INTEGER) RETURNS VOID AS $$
+CREATE OR REPLACE FUNCTION add_employee(ename TEXT, contact_number TEXT, kind KIND, did INTEGER) RETURNS VOID AS $$
     DECLARE
         created_eid INTEGER;
         created_email TEXT;
     BEGIN
-        -- Check if given did exists
-        IF NOT EXISTS (SELECT * FROM Departments d WHERE d.did = _did) THEN 
-            RAISE EXCEPTION 'No such department with the id %', _did;
-        END IF;
-
         -- Temporarily set email to be NULL as we require the auto-generated eid to create email
         INSERT INTO Employees(ename, email, did, resigned_date) 
-        VALUES (ename, NULL, _did, NULL) 
+        VALUES (ename, NULL, did, NULL) 
         RETURNING eid INTO created_eid;
 
         -- Create and set email by concatenating name and eid (guaranteed to be unique)
