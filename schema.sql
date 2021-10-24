@@ -39,12 +39,12 @@ CREATE TABLE Health_Declaration (
     FOREIGN KEY (eid) REFERENCES Employees
 );
 
-
+-- Todo: limit to 3 per employee
 CREATE TABLE Contact_Numbers (
     eid INTEGER,
     contact_number TEXT,
     
-    PRIMARY KEY (eid),
+    PRIMARY KEY (eid, contact_number),
     FOREIGN KEY (eid) REFERENCES Employees
 );  
 
