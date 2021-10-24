@@ -1,6 +1,6 @@
 -- Basic functions
 DROP FUNCTION IF EXISTS add_department(TEXT), 
-    add_employee(TEXT, TEXT, KIND, TEXT) CASCADE;
+    add_employee(TEXT, TEXT, KIND, INTEGER) CASCADE;
 
 DROP PROCEDURE IF EXISTS add_room(INTEGER, INTEGER, TEXT, INTEGER) CASCADE;
 
@@ -19,27 +19,28 @@ CREATE OR REPLACE FUNCTION add_department(dname TEXT) RETURNS VOID AS $$
     END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE PROCEDURE add_room(floor INTEGER, room INTEGER, rname TEXT, capacity INTEGER) AS $$
+CREATE OR REPLACE PROCEDURE add_room(did INTEGER, floor INTEGER, room INTEGER, rname TEXT, capacity INTEGER) AS $$
     BEGIN
-        INSERT INTO Meeting_Rooms (room, floor, rname, capacity) VALUES (room, floor, rname, capacity);
+        --rather than capacity being updated here, it should be updated in UPDATES table
+        INSERT INTO Meeting_Rooms(did, room, floor, rname, capacity) VALUES (did, room, floor, rname, capacity);
+        CALL entry_in_updates(room, floor, capacity);
     END
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION add_employee(ename TEXT, contact_number TEXT, kind KIND, department_name TEXT) RETURNS VOID AS $$
+CREATE OR REPLACE PROCEDURE entry_in_updates(IN newroom INTEGER, IN newfloor INTEGER, IN newcap INTEGER) AS $$      
+    BEGIN
+        INSERT INTO Updates (date,room,floor,new_cap) VALUES (CURRENT_DATE, newroom, newfloor, newcap);
+    END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION add_employee(ename TEXT, contact_number TEXT, kind KIND, did INTEGER) RETURNS VOID AS $$
     DECLARE
         created_eid INTEGER;
         created_email TEXT;
-        matching_did INTEGER = NULL;
     BEGIN
-        -- Find the did based on given department name
-        SELECT did FROM Departments WHERE dname = department_name INTO matching_did;
-        IF matching_did IS NULL THEN 
-            RAISE EXCEPTION 'No such department with the name %', department_name;
-        END IF;
-
         -- Temporarily set email to be NULL as we require the auto-generated eid to create email
         INSERT INTO Employees(ename, email, did, resigned_date) 
-        VALUES (ename, NULL, matching_did, NULL) 
+        VALUES (ename, NULL, did, NULL) 
         RETURNING eid INTO created_eid;
 
         -- Create and set email by concatenating name and eid (guaranteed to be unique)
@@ -50,17 +51,41 @@ CREATE OR REPLACE FUNCTION add_employee(ename TEXT, contact_number TEXT, kind KI
         INSERT INTO Contact_Numbers values(created_eid, contact_number);
 
         -- Insert into respective subtable based on kind
-        -- TODO: Do we need to insert into Booker as well?
         CASE 
             WHEN kind = 'Junior' THEN
                 INSERT INTO Junior VALUES (created_eid);
             WHEN kind = 'Senior' THEN
+                INSERT INTO Booker VALUES (created_eid);
                 INSERT INTO Senior VALUES (created_eid);
             WHEN kind = 'Manager' THEN
+                INSERT INTO Booker VALUES (created_eid);
                 INSERT INTO Manager VALUES (created_eid);
         END CASE;
     END;
 $$ LANGUAGE plpgsql;
+
+
+CREATE OR REPLACE PROCEDURE change_capacity (IN inroom INTEGER, IN infloor INTEGER, IN ncap INTEGER, IN indate DATE, IN manager_eid INTEGER) AS $$
+    DECLARE
+        room_dept INTEGER = NULL;
+    BEGIN
+        --get room_dept (did)
+        SELECT did INTO room_dept FROM Meeting_Rooms mr WHERE mr.room = inroom AND mr.floor = infloor;
+        --valid manager
+        IF (manager_eid NOT IN (SELECT eid FROM Manager)) THEN
+            RAISE EXCEPTION 'Only Managers are allowed to update capacity';
+        ELSEIF (manager_eid NOT IN (SELECT emps.eid FROM Employees emps, Manager mngs 
+                                WHERE emps.eid = mngs.eid AND emps.did = room_dept)) THEN
+            RAISE EXCEPTION 'Ensure Manager is from same department as the room ';
+        ELSE
+            --update capacity and date in Meeting_rooms
+            UPDATE Updates
+            SET new_cap = ncap, date = indate
+            WHERE (floor = infloor AND room = inroom);
+        END IF;
+    END;
+$$ LANGUAGE plpgsql;
+
 
 -- #############################
 --         Core Functions
@@ -141,6 +166,43 @@ CREATE OR REPLACE PROCEDURE leave_meeting(_floor INTEGER, _room INTEGER, _date D
     END;
 $$ LANGUAGE plpgsql;
 
+CREATE OR REPLACE PROCEDURE  approve_meeting(_floor INTEGER, _room INTEGER, _date DATE, _time TIME, _eid INTEGER) AS $$
+    DECLARE
+        room_dept INTEGER = NULL;
+        a_eid INTEGER = NULL;
+    BEGIN
+        --valid manager_check
+        SELECT did INTO room_dept FROM Meeting_Rooms WHERE floor = _floor AND room = _room;
+        IF((SELECT resigned_date FROM Employees WHERE eid = _eid) IS NOT NULL) THEN
+            RAISE EXCEPTION 'Attempt by resigned employee to approve room';
+        ELSEIF (_eid NOT IN (SELECT eid FROM Manager)) THEN
+            RAISE EXCEPTION 'Only Managers are allowed to approve room';
+        ELSEIF (_eid NOT IN (SELECT emps.eid FROM Employees emps, Manager mngs 
+                                WHERE emps.eid = mngs.eid AND emps.did = room_dept)) THEN
+            RAISE EXCEPTION 'Approving Manager needs to be from same department as the to-be-approved room';
+        ELSE
+            SELECT s.approver_eid
+            FROM Sessions s
+            WHERE s.floor = _floor AND
+            s.room = _room AND
+            s.date = _date AND
+            s.time = _time
+            INTO a_eid;
+            IF a_eid IS NOT NULL THEN
+                RAISE EXCEPTION 'Meeting already approved'; 
+            ELSE
+                --approve meeting
+                UPDATE Sessions
+                SET approver_eid = _eid
+                WHERE 
+                floor = _floor AND
+                room = _room AND
+                date = _date AND
+                time = _time;
+            END IF;
+        END IF;
+    END;
+$$ LANGUAGE plpgsql;
 -- #############################
 --        Health Functions
 -- #############################
