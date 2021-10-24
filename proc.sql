@@ -20,8 +20,8 @@ CREATE OR REPLACE FUNCTION add_department(dname TEXT) RETURNS VOID AS $$
 $$ LANGUAGE plpgsql;
 
 
-CREATE OR REPLACE PROCEDURE remove_department(dname TEXT) AS $$
-    DELETE FROM Departments WHERE dname = dname;
+CREATE OR REPLACE PROCEDURE remove_department(did INTEGER) AS $$
+    DELETE FROM Departments WHERE did = did;
 $$ LANGUAGE sql;
 
 
@@ -71,6 +71,11 @@ CREATE OR REPLACE FUNCTION add_employee(ename TEXT, contact_number TEXT, kind KI
         END CASE;
     END;
 $$ LANGUAGE plpgsql;
+
+
+CREATE OR REPLACE PROCEDURE remove_employee(eid1 INTEGER, resigned_date1 DATE) AS $$
+    UPDATE Employees SET resigned_date = resigned_date1 WHERE eid = eid1;
+$$ LANGUAGE sql;
 
 
 CREATE OR REPLACE PROCEDURE change_capacity (IN inroom INTEGER, IN infloor INTEGER, IN ncap INTEGER, IN indate DATE, IN manager_eid INTEGER) AS $$
