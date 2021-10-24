@@ -172,6 +172,43 @@ CREATE OR REPLACE PROCEDURE leave_meeting(_floor INTEGER, _room INTEGER, _date D
     END;
 $$ LANGUAGE plpgsql;
 
+CREATE OR REPLACE PROCEDURE  approve_meeting(_floor INTEGER, _room INTEGER, _date DATE, _time TIME, _eid INTEGER) AS $$
+    DECLARE
+        room_dept INTEGER = NULL;
+        a_eid INTEGER = NULL;
+    BEGIN
+        --valid manager_check
+        SELECT did INTO room_dept FROM Meeting_Rooms WHERE floor = _floor AND room = _room;
+        IF((SELECT resigned_date FROM Employees WHERE eid = _eid) IS NOT NULL) THEN
+            RAISE EXCEPTION 'Attempt by resigned employee to approve room';
+        ELSEIF (_eid NOT IN (SELECT eid FROM Manager)) THEN
+            RAISE EXCEPTION 'Only Managers are allowed to approve room';
+        ELSEIF (_eid NOT IN (SELECT emps.eid FROM Employees emps, Manager mngs 
+                                WHERE emps.eid = mngs.eid AND emps.did = room_dept)) THEN
+            RAISE EXCEPTION 'Approving Manager needs to be from same department as the to-be-approved room';
+        ELSE
+            SELECT s.approver_eid
+            FROM Sessions s
+            WHERE s.floor = _floor AND
+            s.room = _room AND
+            s.date = _date AND
+            s.time = _time
+            INTO a_eid;
+            IF a_eid IS NOT NULL THEN
+                RAISE EXCEPTION 'Meeting already approved'; 
+            ELSE
+                --approve meeting
+                UPDATE Sessions
+                SET approver_eid = _eid
+                WHERE 
+                floor = _floor AND
+                room = _room AND
+                date = _date AND
+                time = _time;
+            END IF;
+        END IF;
+    END;
+$$ LANGUAGE plpgsql;
 -- #############################
 --        Health Functions
 -- #############################
