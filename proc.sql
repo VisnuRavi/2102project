@@ -1,6 +1,6 @@
 -- Basic functions
 DROP FUNCTION IF EXISTS add_department(TEXT), 
-    add_employee(TEXT, TEXT, KIND, TEXT) CASCADE;
+    add_employee(TEXT, TEXT, KIND, INTEGER) CASCADE;
 
 DROP PROCEDURE IF EXISTS add_room(INTEGER, INTEGER, TEXT, INTEGER) CASCADE;
 
@@ -33,21 +33,19 @@ CREATE OR REPLACE PROCEDURE entry_in_updates(IN newroom INTEGER, IN newfloor INT
     END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION add_employee(ename TEXT, contact_number TEXT, kind KIND, department_name TEXT) RETURNS VOID AS $$
+CREATE OR REPLACE FUNCTION add_employee(ename TEXT, contact_number TEXT, kind KIND, _did INTEGER) RETURNS VOID AS $$
     DECLARE
         created_eid INTEGER;
         created_email TEXT;
-        matching_did INTEGER = NULL;
     BEGIN
-        -- Find the did based on given department name
-        SELECT did FROM Departments WHERE dname = department_name INTO matching_did;
-        IF matching_did IS NULL THEN 
-            RAISE EXCEPTION 'No such department with the name %', department_name;
+        -- Check if given did exists
+        IF NOT EXISTS (SELECT * FROM Departments d WHERE d.did = _did) THEN 
+            RAISE EXCEPTION 'No such department with the id %', _did;
         END IF;
 
         -- Temporarily set email to be NULL as we require the auto-generated eid to create email
         INSERT INTO Employees(ename, email, did, resigned_date) 
-        VALUES (ename, NULL, matching_did, NULL) 
+        VALUES (ename, NULL, _did, NULL) 
         RETURNING eid INTO created_eid;
 
         -- Create and set email by concatenating name and eid (guaranteed to be unique)
@@ -58,13 +56,14 @@ CREATE OR REPLACE FUNCTION add_employee(ename TEXT, contact_number TEXT, kind KI
         INSERT INTO Contact_Numbers values(created_eid, contact_number);
 
         -- Insert into respective subtable based on kind
-        -- TODO: Do we need to insert into Booker as well?
         CASE 
             WHEN kind = 'Junior' THEN
                 INSERT INTO Junior VALUES (created_eid);
             WHEN kind = 'Senior' THEN
+                INSERT INTO Booker VALUES (created_eid);
                 INSERT INTO Senior VALUES (created_eid);
             WHEN kind = 'Manager' THEN
+                INSERT INTO Booker VALUES (created_eid);
                 INSERT INTO Manager VALUES (created_eid);
         END CASE;
     END;
