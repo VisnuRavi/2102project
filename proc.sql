@@ -4,6 +4,8 @@ DROP FUNCTION IF EXISTS add_department(TEXT),
 
 DROP PROCEDURE IF EXISTS add_room(INTEGER, INTEGER, TEXT, INTEGER) CASCADE;
 
+DROP PROCEDURE IF EXISTS change_capacity(INTEGER, INTEGER, INTEGER, DATE, INTEGER);
+
 -- Core functions
 DROP FUNCTION IF EXISTS search_room(INTEGER, DATE, TIME, TIME) CASCADE;
 
@@ -20,8 +22,8 @@ CREATE OR REPLACE FUNCTION add_department(dname TEXT) RETURNS VOID AS $$
 $$ LANGUAGE plpgsql;
 
 
-CREATE OR REPLACE PROCEDURE remove_department(did INTEGER) AS $$
-    DELETE FROM Departments WHERE did = did;
+CREATE OR REPLACE PROCEDURE remove_department(_did INTEGER) AS $$
+    DELETE FROM Departments WHERE did = _did;
 $$ LANGUAGE sql;
 
 
@@ -97,7 +99,7 @@ $$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION search_room(qcapacity INTEGER, qdate DATE, start_hour TIME, end_hour TIME) RETURNS TABLE (
     did INTEGER,
-    room TEXT,
+    room INTEGER,
     floor INTEGER,
     rname TEXT,
     capacity INTEGER
@@ -120,7 +122,7 @@ CREATE OR REPLACE FUNCTION search_room(qcapacity INTEGER, qdate DATE, start_hour
 $$ LANGUAGE plpgsql;
 
 
-CREATE OR REPLACE PROCEDUTE book_room(_floor INTEGER, _room INTEGER, _date DATE, _start_hour TIME, _end_hour TIME, _booker_eid INTEGER) AS $$
+CREATE OR REPLACE PROCEDURE book_room(_floor INTEGER, _room INTEGER, _date DATE, _start_hour TIME, _end_hour TIME, _booker_eid INTEGER) AS $$
     DECLARE
         room_available INTEGER;
         is_booker INTEGER;
@@ -134,17 +136,20 @@ CREATE OR REPLACE PROCEDUTE book_room(_floor INTEGER, _room INTEGER, _date DATE,
         IF (room_available > 0) THEN
             SELECT COUNT(*) INTO is_booker
             FROM Booker
-            WHERE eid = _booker_eid;
+            WHERE eid = _booker_eid
+            AND resigned_date IS NULL;
             
             IF (is_booker) > 0 THEN
                 WHILE current_hour < _end_hour LOOP
                     INSERT INTO Sessions VALUES (current_hour, _date, _room, _floor, _booker_eid);
+                    INSERT INTO Joins VALUES (_booker_eid, _room, _floor, current_hour, _date);
                     current_hour := current_hour + INTERVAL '1 hour';
                 END LOOP;
                 
                 SELECT join_meeting(_floor, _room, _date, _start_hour, _end_hour, _booker_eid);
             ELSE
                 RAISE EXCEPTION 'Only a booker can book a meeting room';
+            END IF;
         ELSE
             RAISE EXCEPTION 'Meeting room is unavailable';
         END IF;
@@ -320,7 +325,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION max_contact_numbers() RETURNS TRIGGER AS $$
+CREATE OR REPLACE FUNCTION FN_Contact_Numbers_Check_Max() RETURNS TRIGGER AS $$
     DECLARE
         contact_numbers INTEGER;
     BEGIN
