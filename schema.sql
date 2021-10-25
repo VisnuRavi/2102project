@@ -133,21 +133,16 @@ CREATE TABLE Joins (
     FOREIGN KEY (eid) REFERENCES Employees
 ); 
 
--- ##################
+-- ########################################################################
 --       Triggers
--- ##################
-CREATE OR REPLACE FUNCTION max_contact_numbers() RETURNS TRIGGER AS $$
-    DECLARE
-        contact_numbers INTEGER;
-    BEGIN
-        SELECT COUNT(*) INTO contact_numbers FROM Contact_Numbers WHERE eid = NEW.eid;
-        IF (contact_numbers = 3) THEN 
-            RETURN NULL;
-        ELSE
-            RETURN NEW;
-        END IF;
-    END;
-$$ LANGUAGE plpgsql;
+-- naming conv for trigger: TR_<TableName>_<ActionName>
+-- naming conv for trigger func: FN_<TableName>_<ActionName>
+-- ######################################################
+
+--add a NEW entry for a NEW meetingroom in the updates table
+CREATE TRIGGER TR_Meeting_Rooms_AfterInsert
+AFTER INSERT ON Meeting_Rooms
+FOR EACH ROW EXECUTE FUNCTION FN_Meeting_Rooms_AfterInsert();
 
 CREATE TRIGGER max_contact_numbers
 BEFORE INSERT on Contact_Numbers
