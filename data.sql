@@ -226,7 +226,7 @@ INSERT INTO Manager VALUES
 (309);
 
 
-/*
+
 INSERT INTO Meeting_Rooms VALUES
 (900, 0, 0, 'bigroom', 10),
 (900, 1, 0, 'smallroom', 10),
@@ -235,11 +235,11 @@ INSERT INTO Meeting_Rooms VALUES
 (902, 0, 2, 'bigroom', 10),
 (902, 1, 2, 'smallroom', 10),
 (903, 0, 3, 'bigroom', 10),
-(903, 1, 3, 'smallroom', 10),SE
+(903, 1, 3, 'smallroom', 10),
 (904, 0, 4, 'bigroom', 10),
 (904, 1, 4, 'smallroom', 10);
-*/
 
+/*
 CALL add_room(900, 0, 0, 'bigroom', 6);
 CALL add_room(900, 0, 1, 'smallroom', 6);
 CALL add_room(901, 1, 1, 'bigroom', 6);
@@ -263,7 +263,7 @@ CALL change_capacity(3, 0, 2, CURRENT_DATE + 7, 306);
 CALL change_capacity(3, 1, 2, CURRENT_DATE + 7, 307);
 CALL change_capacity(4, 0, 2, CURRENT_DATE + 7, 308);
 CALL change_capacity(4, 1, 2, CURRENT_DATE + 7, 309);
-
+*/
 
 --creating 8 sessions -> 2 per department -> same meeting room per dept, but different dates (cap change)
 --booker id -> senior
@@ -276,7 +276,8 @@ INSERT INTO Sessions VALUES
 ('10:00:00', CURRENT_DATE, 0, 2, 204,NULL),
 ('10:00:00', CURRENT_DATE + 7, 0, 2, 204,NULL),
 ('10:00:00', CURRENT_DATE, 0, 3, 206,NULL),
-('10:00:00', CURRENT_DATE + 7, 0, 3, 206,NULL);
+('10:00:00', CURRENT_DATE + 7, 0, 3, 206,NULL)
+('10:00:00' + 1, CURRENT_DATE, 0, 0, 200, NULL);
 
 
 --join meetings test
@@ -292,6 +293,7 @@ INSERT INTO Joins VALUES
 (206, 0, 3, '10:00:00', CURRENT_DATE),
 (206, 0, 3, '10:00:00', CURRENT_DATE + 7);
 
+/*
 --test booker (should throw error)
 CALL join_meeting(0, 0, CURRENT_DATE, '10:00:00', 200);
 
@@ -309,3 +311,4 @@ CALL join_meeting(0, 0, CURRENT_DATE + 7, '10:00:00', 101);
 CALL join_meeting(0, 0, CURRENT_DATE + 7, '10:00:00', 201);
 CALL join_meeting(0, 0, CURRENT_DATE + 7, '10:00:00', 300);
 CALL join_meeting(0, 0, CURRENT_DATE + 7, '10:00:00', 301);
+*/
