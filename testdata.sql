@@ -55,44 +55,73 @@ INSERT INTO Employees VALUES
 
 --Health declaration
 INSERT INTO Health_Declaration (date, eid, temp) VALUES
---date: '2000-12-31'
+--date: CURRENT_DATE
 --eid: all the eids
 --temp: 37.5
+--current date used for testing purposes
+(CURRENT_DATE,100, 37.5),
+(CURRENT_DATE,101, 37.5),
+(CURRENT_DATE,200, 37.5),
+(CURRENT_DATE,201, 37.5),
+(CURRENT_DATE,300, 37.5),
+(CURRENT_DATE,301, 37.5),
+(CURRENT_DATE,102, 37.5),
+(CURRENT_DATE,103, 37.5),
+(CURRENT_DATE,202, 37.5),
+(CURRENT_DATE,203, 37.5),
+(CURRENT_DATE,302, 37.5),
+(CURRENT_DATE,303, 37.5),
+(CURRENT_DATE,104, 37.5),
+(CURRENT_DATE,105, 37.5),
+(CURRENT_DATE,204, 37.5),
+(CURRENT_DATE,205, 37.5),
+(CURRENT_DATE,304, 37.5),
+(CURRENT_DATE,305, 37.5),
+(CURRENT_DATE,106, 37.5),
+(CURRENT_DATE,107, 37.5),
+(CURRENT_DATE,206, 37.5),
+(CURRENT_DATE,207, 37.5),
+(CURRENT_DATE,306, 37.5),
+(CURRENT_DATE,307, 37.5),
+(CURRENT_DATE,108, 37.5),
+(CURRENT_DATE,109, 37.5),
+(CURRENT_DATE,208, 37.5),
+(CURRENT_DATE,209, 37.5),
+(CURRENT_DATE,308, 37.5),
+(CURRENT_DATE,309, 37.5);
 
+/*
 ('2000-12-31',100, 37.5),
 ('2000-12-31',101, 37.5),
 ('2000-12-31',200, 37.5),
 ('2000-12-31',201, 37.5),
 ('2000-12-31',300, 37.5),
 ('2000-12-31',301, 37.5),
-
 ('2000-12-31',102, 37.5),
 ('2000-12-31',103, 37.5),
 ('2000-12-31',202, 37.5),
 ('2000-12-31',203, 37.5),
 ('2000-12-31',302, 37.5),
 ('2000-12-31',303, 37.5),
-
 ('2000-12-31',104, 37.5),
 ('2000-12-31',105, 37.5),
 ('2000-12-31',204, 37.5),
 ('2000-12-31',205, 37.5),
 ('2000-12-31',304, 37.5),
 ('2000-12-31',305, 37.5),
-
 ('2000-12-31',106, 37.5),
 ('2000-12-31',107, 37.5),
 ('2000-12-31',206, 37.5),
 ('2000-12-31',207, 37.5),
 ('2000-12-31',306, 37.5),
 ('2000-12-31',307, 37.5),
-
 ('2000-12-31',108, 37.5),
 ('2000-12-31',109, 37.5),
 ('2000-12-31',208, 37.5),
 ('2000-12-31',209, 37.5),
 ('2000-12-31',308, 37.5),
 ('2000-12-31',309, 37.5);
+*/
 
 INSERT INTO Contact_Numbers VALUES
 (100, '+6510045678'),
@@ -197,6 +226,7 @@ INSERT INTO Manager VALUES
 (309);
 
 
+/*
 INSERT INTO Meeting_Rooms VALUES
 (900, 0, 0, 'bigroom', 10),
 (900, 1, 0, 'smallroom', 10),
@@ -205,9 +235,89 @@ INSERT INTO Meeting_Rooms VALUES
 (902, 0, 2, 'bigroom', 10),
 (902, 1, 2, 'smallroom', 10),
 (903, 0, 3, 'bigroom', 10),
-(903, 1, 3, 'smallroom', 10),
+(903, 1, 3, 'smallroom', 10),SE
 (904, 0, 4, 'bigroom', 10),
 (904, 1, 4, 'smallroom', 10);
+*/
+
+CALL add_room(900, 0, 0, 'bigroom', 6);
+CALL add_room(900, 0, 1, 'smallroom', 6);
+CALL add_room(901, 1, 1, 'bigroom', 6);
+CALL add_room(901, 1, 0, 'smallroom', 6);
+CALL add_room(902, 2, 1, 'bigroom', 6);
+CALL add_room(902, 2, 0, 'smallroom', 6);
+CALL add_room(903, 3, 1, 'bigroom', 6);
+CALL add_room(903, 3, 0, 'smallroom', 6);
+CALL add_room(904, 4, 1, 'bigroom', 6);
+CALL add_room(904, 4, 0, 'smallroom', 6);
+
+
+--change capacity -> 7 days later
+CALL change_capacity(0, 0, 2, CURRENT_DATE + 7, 300);
+CALL change_capacity(0, 1, 2, CURRENT_DATE + 7, 301);
+CALL change_capacity(1, 0, 2, CURRENT_DATE + 7, 302);
+CALL change_capacity(1, 1, 2, CURRENT_DATE + 7, 303);
+CALL change_capacity(2, 0, 2, CURRENT_DATE + 7, 304);
+CALL change_capacity(2, 1, 2, CURRENT_DATE + 7, 305);
+CALL change_capacity(3, 0, 2, CURRENT_DATE + 7, 306);
+CALL change_capacity(3, 1, 2, CURRENT_DATE + 7, 307);
+CALL change_capacity(4, 0, 2, CURRENT_DATE + 7, 308);
+CALL change_capacity(4, 1, 2, CURRENT_DATE + 7, 309);
+
+
+--creating 8 sessions -> 2 per department -> same meeting room per dept, but different dates (cap change)
+--booker id -> senior
+--approver_id = NULL
+INSERT INTO Sessions VALUES
+('10:00:00', CURRENT_DATE, 0, 0, 200,NULL),
+('10:00:00', CURRENT_DATE + 7, 0, 0, 200,NULL),
+('10:00:00', CURRENT_DATE, 0, 1, 202,NULL),
+('10:00:00', CURRENT_DATE + 7, 0, 1, 202,NULL),
+('10:00:00', CURRENT_DATE, 0, 2, 204,NULL),
+('10:00:00', CURRENT_DATE + 7, 0, 2, 204,NULL),
+('10:00:00', CURRENT_DATE, 0, 3, 206,NULL),
+('10:00:00', CURRENT_DATE + 7, 0, 3, 206,NULL);
+
+
+--join meetings test
+
+--booker already inside for that session
+INSERT INTO Joins VALUES
+(200, 0, 0, '10:00:00', CURRENT_DATE),
+(200, 0, 0, '10:00:00', CURRENT_DATE + 7),
+(202, 0, 1, '10:00:00', CURRENT_DATE),
+(202, 0, 1, '10:00:00', CURRENT_DATE + 7),
+(204, 0, 2, '10:00:00', CURRENT_DATE),
+(204, 0, 2, '10:00:00', CURRENT_DATE + 7),
+(206, 0, 3, '10:00:00', CURRENT_DATE),
+(206, 0, 3, '10:00:00', CURRENT_DATE + 7);
+
+--test booker (should throw error)
+CALL join_meeting(0, 0, CURRENT_DATE, '10:00:00', 200);
+
+
+--employees (except booker) from each dept try to join meeting 1 (cap: 6) and meeting 2 (cap: 2)
+CALL join_meeting(0, 0, CURRENT_DATE, '10:00:00', 100);
+CALL join_meeting(0, 0, CURRENT_DATE, '10:00:00', 101);
+CALL join_meeting(0, 0, CURRENT_DATE, '10:00:00', 201);
+CALL join_meeting(0, 0, CURRENT_DATE, '10:00:00', 300);
+CALL join_meeting(0, 0, CURRENT_DATE, '10:00:00', 301);
+
+
+CALL join_meeting(0, 0, CURRENT_DATE + 7, '10:00:00', 100);
+CALL join_meeting(0, 0, CURRENT_DATE + 7, '10:00:00', 101);
+CALL join_meeting(0, 0, CURRENT_DATE + 7, '10:00:00', 201);
+CALL join_meeting(0, 0, CURRENT_DATE + 7, '10:00:00', 300);
+CALL join_meeting(0, 0, CURRENT_DATE + 7, '10:00:00', 301);
+
+
+
+
+
+
+
+
+
 
 
 

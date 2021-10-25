@@ -21,16 +21,9 @@ $$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE PROCEDURE add_room(did INTEGER, floor INTEGER, room INTEGER, rname TEXT, capacity INTEGER) AS $$
     BEGIN
-        --rather than capacity being updated here, it should be updated in UPDATES table
+        --rather than capacity being updated here, it should be updated in UPDATES table (trigger)
         INSERT INTO Meeting_Rooms(did, room, floor, rname, capacity) VALUES (did, room, floor, rname, capacity);
-        CALL entry_in_updates(room, floor, capacity);
     END
-$$ LANGUAGE plpgsql;
-
-CREATE OR REPLACE PROCEDURE entry_in_updates(IN newroom INTEGER, IN newfloor INTEGER, IN newcap INTEGER) AS $$      
-    BEGIN
-        INSERT INTO Updates (date,room,floor,new_cap) VALUES (CURRENT_DATE, newroom, newfloor, newcap);
-    END;
 $$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION add_employee(ename TEXT, contact_number TEXT, kind KIND, department_name TEXT) RETURNS VOID AS $$
@@ -71,28 +64,21 @@ CREATE OR REPLACE FUNCTION add_employee(ename TEXT, contact_number TEXT, kind KI
 $$ LANGUAGE plpgsql;
 
 
-CREATE OR REPLACE PROCEDURE change_capacity (IN inroom INTEGER, IN infloor INTEGER, IN ncap INTEGER, IN indate DATE, IN manager_eid INTEGER) AS $$
+CREATE OR REPLACE PROCEDURE change_capacity (IN _floor INTEGER, IN _room INTEGER, IN _cap INTEGER, IN _date DATE, IN _eid INTEGER) AS $$
     DECLARE
         room_dept INTEGER = NULL;
     BEGIN
         --get room_dept (did)
-        SELECT did INTO room_dept FROM Meeting_Rooms mr WHERE mr.room = inroom AND mr.floor = infloor;
+        SELECT did INTO room_dept FROM Meeting_Rooms mr WHERE mr.room = _room AND mr.floor = _floor;
         --valid manager
-        IF (manager_eid NOT IN (SELECT eid FROM Manager)) THEN
+        IF (_eid NOT IN (SELECT eid FROM Manager)) THEN
             RAISE EXCEPTION 'Only Managers are allowed to update capacity';
-        ELSEIF (manager_eid NOT IN (SELECT emps.eid FROM Employees emps, Manager mngs 
+        ELSEIF (_eid NOT IN (SELECT emps.eid FROM Employees emps, Manager mngs 
                                 WHERE emps.eid = mngs.eid AND emps.did = room_dept)) THEN
             RAISE EXCEPTION 'Ensure Manager is from same department as the room ';
         ELSE
-            /*
-            --update capacity and date in Meeting_rooms
-            UPDATE Updates
-            SET new_cap = ncap, date = indate
-            WHERE (floor = infloor AND room = inroom);
-            */
-
             --add a new entry to updates table, reflecting change in room's capacity
-            INSERT INTO Updates (date,room,floor,new_cap) VALUES (indate, inroom, infloor, ncap);
+            INSERT INTO Updates (date,room,floor,new_cap) VALUES (_date, _room, _floor, _cap);
         END IF;
     END;
 $$ LANGUAGE plpgsql;
@@ -216,7 +202,56 @@ CREATE OR REPLACE PROCEDURE  approve_meeting(_floor INTEGER, _room INTEGER, _dat
     END;
 $$ LANGUAGE plpgsql;
 
+CREATE OR REPLACE PROCEDURE join_meeting(_floor INTEGER, _room INTEGER, _date DATE, _time TIME, _eid INTEGER) AS $$
+DECLARE
+    max_capacity INTEGER = NULL;
+    curr_emp_count INTEGER = NULL;
+BEGIN
 
+    IF((SELECT COUNT(*) FROM Sessions WHERE floor = _floor AND room = _room AND date = _date AND time = _time) <> 1) THEN
+        RAISE EXCEPTION 'Invalid meeting information entered';
+    ELSEIF ( (SELECT approver_eid FROM Sessions WHERE floor = _floor AND room = _room AND date = _date AND time = _time) IS NOT NULL) THEN
+        RAISE EXCEPTION 'Employees can only join non-approved meetings';
+    ELSEIF ( (SELECT fever FROM Health_Declaration WHERE date = CURRENT_DATE AND eid = _eid) = TRUE) THEN
+        RAISE EXCEPTION 'Employee is having a fever';
+    ELSEIF ( (SELECT fever FROM Health_Declaration WHERE date = CURRENT_DATE AND eid = _eid) IS NULL) THEN
+        RAISE EXCEPTION 'Employee has not declared their health today';
+    ELSEIF ( (_eid IN (SELECT eid FROM Joins WHERE room = _room AND _floor = floor AND time = _time AND date = _date)) = TRUE) THEN
+        RAISE EXCEPTION 'Employee % already added to Meeting on % % at room: %, floor: % ',_eid,_date, _time, _room, _floor;
+    ELSE
+        --maximum allowable room capacity at time of joining
+        SELECT new_cap INTO max_capacity 
+        FROM updates
+        WHERE 
+            room = _room 
+            AND 
+            floor = _floor
+            AND
+            date <= CURRENT_DATE
+        ORDER BY date DESC
+        LIMIT 1;
+        --count the current employees in booking-to-join
+        SELECT COUNT(*) INTO curr_emp_count
+        FROM Joins j
+        WHERE 
+            j.room = _room
+            AND
+            j.floor = _floor
+            AND
+            j.time = _time
+            AND
+            j.date = _date;
+
+        --check whether this joining employee can fit the maximum allowable room capacity
+        IF ( (max_capacity - curr_emp_count) >= 1) THEN
+            --add the dude
+            INSERT INTO Joins VALUES (_eid, _room, _floor, _time, _date);
+        ELSE
+            RAISE EXCEPTION 'Meeting on % % at room: %, floor: % is at already at full capacity!', _date, _time, _room, _floor;
+        END IF;
+    END IF;
+END;
+$$ LANGUAGE plpgsql;
 
 
 -- #############################
@@ -230,3 +265,14 @@ $$ LANGUAGE plpgsql;
 -- #############################
 --        Admin Functions
 -- #############################
+
+
+-- ###########################
+--        Trigger Functions
+-- ###########################
+CREATE OR REPLACE FUNCTION FN_Meeting_Rooms_AfterInsert() RETURNS TRIGGER AS $$ 
+BEGIN
+    INSERT INTO Updates (date,room,floor,new_cap) VALUES (CURRENT_DATE, NEW.room, NEW.floor, NEW.capacity);
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
