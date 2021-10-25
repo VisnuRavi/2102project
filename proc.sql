@@ -1,6 +1,6 @@
 -- Basic functions
 DROP FUNCTION IF EXISTS add_department(TEXT), 
-    add_employee(TEXT, TEXT, KIND, TEXT) CASCADE;
+    add_employee(TEXT, TEXT, KIND, INTEGER) CASCADE;
 
 DROP PROCEDURE IF EXISTS add_room(INTEGER, INTEGER, TEXT, INTEGER) CASCADE;
 
@@ -19,6 +19,12 @@ CREATE OR REPLACE FUNCTION add_department(dname TEXT) RETURNS VOID AS $$
     END;
 $$ LANGUAGE plpgsql;
 
+
+CREATE OR REPLACE PROCEDURE remove_department(did INTEGER) AS $$
+    DELETE FROM Departments WHERE did = did;
+$$ LANGUAGE sql;
+
+
 CREATE OR REPLACE PROCEDURE add_room(did INTEGER, floor INTEGER, room INTEGER, rname TEXT, capacity INTEGER) AS $$
     BEGIN
         --rather than capacity being updated here, it should be updated in UPDATES table (trigger)
@@ -26,21 +32,16 @@ CREATE OR REPLACE PROCEDURE add_room(did INTEGER, floor INTEGER, room INTEGER, r
     END
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION add_employee(ename TEXT, contact_number TEXT, kind KIND, department_name TEXT) RETURNS VOID AS $$
+
+CREATE OR REPLACE FUNCTION add_employee(ename TEXT, contact_number TEXT, kind KIND, did INTEGER) RETURNS VOID AS $$
+
     DECLARE
         created_eid INTEGER;
         created_email TEXT;
-        matching_did INTEGER = NULL;
     BEGIN
-        -- Find the did based on given department name
-        SELECT did FROM Departments WHERE dname = department_name INTO matching_did;
-        IF matching_did IS NULL THEN 
-            RAISE EXCEPTION 'No such department with the name %', department_name;
-        END IF;
-
         -- Temporarily set email to be NULL as we require the auto-generated eid to create email
         INSERT INTO Employees(ename, email, did, resigned_date) 
-        VALUES (ename, NULL, matching_did, NULL) 
+        VALUES (ename, NULL, did, NULL) 
         RETURNING eid INTO created_eid;
 
         -- Create and set email by concatenating name and eid (guaranteed to be unique)
@@ -51,17 +52,23 @@ CREATE OR REPLACE FUNCTION add_employee(ename TEXT, contact_number TEXT, kind KI
         INSERT INTO Contact_Numbers values(created_eid, contact_number);
 
         -- Insert into respective subtable based on kind
-        -- TODO: Do we need to insert into Booker as well?
         CASE 
             WHEN kind = 'Junior' THEN
                 INSERT INTO Junior VALUES (created_eid);
             WHEN kind = 'Senior' THEN
+                INSERT INTO Booker VALUES (created_eid);
                 INSERT INTO Senior VALUES (created_eid);
             WHEN kind = 'Manager' THEN
+                INSERT INTO Booker VALUES (created_eid);
                 INSERT INTO Manager VALUES (created_eid);
         END CASE;
     END;
 $$ LANGUAGE plpgsql;
+
+
+CREATE OR REPLACE PROCEDURE remove_employee(eid1 INTEGER, resigned_date1 DATE) AS $$
+    UPDATE Employees SET resigned_date = resigned_date1 WHERE eid = eid1;
+$$ LANGUAGE sql;
 
 
 CREATE OR REPLACE PROCEDURE change_capacity (IN _floor INTEGER, IN _room INTEGER, IN _cap INTEGER, IN _date DATE, IN _eid INTEGER) AS $$
@@ -112,6 +119,40 @@ CREATE OR REPLACE FUNCTION search_room(qcapacity INTEGER, qdate DATE, start_hour
     END;
 $$ LANGUAGE plpgsql;
 
+
+CREATE OR REPLACE PROCEDUTE book_room(_floor INTEGER, _room INTEGER, _date DATE, _start_hour TIME, _end_hour TIME, _booker_eid INTEGER) AS $$
+    DECLARE
+        room_available INTEGER;
+        is_booker INTEGER;
+        current_hour TIME := _start_hour;
+    BEGIN
+        --this also handles when cap=0, as search room will give rooms with cap>0
+        SELECT COUNT(*) INTO room_available 
+        FROM search_room(0, _date, _start_hour, _end_hour) 
+        WHERE floor = _floor AND room = _room;
+
+        IF (room_available > 0) THEN
+            SELECT COUNT(*) INTO is_booker
+            FROM Booker
+            WHERE eid = _booker_eid;
+            
+            IF (is_booker) > 0 THEN
+                WHILE current_hour < _end_hour LOOP
+                    INSERT INTO Sessions VALUES (current_hour, _date, _room, _floor, _booker_eid);
+                    current_hour := current_hour + INTERVAL '1 hour';
+                END LOOP;
+                
+                SELECT join_meeting(_floor, _room, _date, _start_hour, _end_hour, _booker_eid);
+            ELSE
+                RAISE EXCEPTION 'Only a booker can book a meeting room';
+        ELSE
+            RAISE EXCEPTION 'Meeting room is unavailable';
+        END IF;
+    END;
+$$ LANGUAGE plpgsql;
+
+
+
 CREATE OR REPLACE PROCEDURE unbook_room(_floor INTEGER, _room INTEGER, _date DATE, _time TIMESTAMP, _booker_eid INTEGER) AS $$
     DECLARE
         session_deleted INTEGER = NULL;
@@ -136,6 +177,7 @@ CREATE OR REPLACE PROCEDURE unbook_room(_floor INTEGER, _room INTEGER, _date DAT
         j.time = _time;
     END;
 $$ LANGUAGE plpgsql;
+
 
 CREATE OR REPLACE PROCEDURE leave_meeting(_floor INTEGER, _room INTEGER, _date DATE, _time TIMESTAMP, _eid INTEGER) AS $$
     DECLARE
@@ -162,6 +204,7 @@ CREATE OR REPLACE PROCEDURE leave_meeting(_floor INTEGER, _room INTEGER, _date D
         eid = _eid; 
     END;
 $$ LANGUAGE plpgsql;
+
 
 CREATE OR REPLACE PROCEDURE  approve_meeting(_floor INTEGER, _room INTEGER, _date DATE, _time TIME, _eid INTEGER) AS $$
     DECLARE
@@ -275,4 +318,17 @@ BEGIN
     INSERT INTO Updates (date,room,floor,new_cap) VALUES (CURRENT_DATE, NEW.room, NEW.floor, NEW.capacity);
     RETURN NEW;
 END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION max_contact_numbers() RETURNS TRIGGER AS $$
+    DECLARE
+        contact_numbers INTEGER;
+    BEGIN
+        SELECT COUNT(*) INTO contact_numbers FROM Contact_Numbers WHERE eid = NEW.eid;
+        IF (contact_numbers = 3) THEN 
+            RETURN NULL;
+        ELSE
+            RETURN NEW;
+        END IF;
+    END;
 $$ LANGUAGE plpgsql;
