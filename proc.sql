@@ -19,6 +19,12 @@ CREATE OR REPLACE FUNCTION add_department(dname TEXT) RETURNS VOID AS $$
     END;
 $$ LANGUAGE plpgsql;
 
+
+CREATE OR REPLACE PROCEDURE remove_department(did INTEGER) AS $$
+    DELETE FROM Departments WHERE did = did;
+$$ LANGUAGE sql;
+
+
 CREATE OR REPLACE PROCEDURE add_room(did INTEGER, floor INTEGER, room INTEGER, rname TEXT, capacity INTEGER) AS $$
     BEGIN
         --rather than capacity being updated here, it should be updated in UPDATES table
@@ -27,11 +33,13 @@ CREATE OR REPLACE PROCEDURE add_room(did INTEGER, floor INTEGER, room INTEGER, r
     END
 $$ LANGUAGE plpgsql;
 
+
 CREATE OR REPLACE PROCEDURE entry_in_updates(IN newroom INTEGER, IN newfloor INTEGER, IN newcap INTEGER) AS $$      
     BEGIN
         INSERT INTO Updates (date,room,floor,new_cap) VALUES (CURRENT_DATE, newroom, newfloor, newcap);
     END;
 $$ LANGUAGE plpgsql;
+
 
 CREATE OR REPLACE FUNCTION add_employee(ename TEXT, contact_number TEXT, kind KIND, did INTEGER) RETURNS VOID AS $$
     DECLARE
@@ -63,6 +71,11 @@ CREATE OR REPLACE FUNCTION add_employee(ename TEXT, contact_number TEXT, kind KI
         END CASE;
     END;
 $$ LANGUAGE plpgsql;
+
+
+CREATE OR REPLACE PROCEDURE remove_employee(eid1 INTEGER, resigned_date1 DATE) AS $$
+    UPDATE Employees SET resigned_date = resigned_date1 WHERE eid = eid1;
+$$ LANGUAGE sql;
 
 
 CREATE OR REPLACE PROCEDURE change_capacity (IN inroom INTEGER, IN infloor INTEGER, IN ncap INTEGER, IN indate DATE, IN manager_eid INTEGER) AS $$
@@ -120,6 +133,40 @@ CREATE OR REPLACE FUNCTION search_room(qcapacity INTEGER, qdate DATE, start_hour
     END;
 $$ LANGUAGE plpgsql;
 
+
+CREATE OR REPLACE PROCEDUTE book_room(_floor INTEGER, _room INTEGER, _date DATE, _start_hour TIME, _end_hour TIME, _booker_eid INTEGER) AS $$
+    DECLARE
+        room_available INTEGER;
+        is_booker INTEGER;
+        current_hour TIME := _start_hour;
+    BEGIN
+        --this also handles when cap=0, as search room will give rooms with cap>0
+        SELECT COUNT(*) INTO room_available 
+        FROM search_room(0, _date, _start_hour, _end_hour) 
+        WHERE floor = _floor AND room = _room;
+
+        IF (room_available > 0) THEN
+            SELECT COUNT(*) INTO is_booker
+            FROM Booker
+            WHERE eid = _booker_eid;
+            
+            IF (is_booker) > 0 THEN
+                WHILE current_hour < _end_hour LOOP
+                    INSERT INTO Sessions VALUES (current_hour, _date, _room, _floor, _booker_eid);
+                    current_hour := current_hour + INTERVAL '1 hour';
+                END LOOP;
+                
+                SELECT join_meeting(_floor, _room, _date, _start_hour, _end_hour, _booker_eid);
+            ELSE
+                RAISE EXCEPTION 'Only a booker can book a meeting room';
+        ELSE
+            RAISE EXCEPTION 'Meeting room is unavailable';
+        END IF;
+    END;
+$$ LANGUAGE plpgsql;
+
+
+
 CREATE OR REPLACE PROCEDURE unbook_room(_floor INTEGER, _room INTEGER, _date DATE, _time TIMESTAMP, _booker_eid INTEGER) AS $$
     DECLARE
         session_deleted INTEGER = NULL;
@@ -144,6 +191,7 @@ CREATE OR REPLACE PROCEDURE unbook_room(_floor INTEGER, _room INTEGER, _date DAT
         j.time = _time;
     END;
 $$ LANGUAGE plpgsql;
+
 
 CREATE OR REPLACE PROCEDURE leave_meeting(_floor INTEGER, _room INTEGER, _date DATE, _time TIMESTAMP, _eid INTEGER) AS $$
     DECLARE
@@ -170,6 +218,7 @@ CREATE OR REPLACE PROCEDURE leave_meeting(_floor INTEGER, _room INTEGER, _date D
         eid = _eid; 
     END;
 $$ LANGUAGE plpgsql;
+
 
 CREATE OR REPLACE PROCEDURE  approve_meeting(_floor INTEGER, _room INTEGER, _date DATE, _time TIME, _eid INTEGER) AS $$
     DECLARE
