@@ -108,8 +108,7 @@ CREATE OR REPLACE FUNCTION search_room(qcapacity INTEGER, qdate DATE, start_hour
     did INTEGER,
     room INTEGER,
     floor INTEGER,
-    rname TEXT,
-    capacity INTEGER
+    rname TEXT
 ) AS $$
     DECLARE
         stripped_start_hour TIME;
@@ -127,14 +126,18 @@ CREATE OR REPLACE FUNCTION search_room(qcapacity INTEGER, qdate DATE, start_hour
         SELECT date_trunc('hour', end_hour) INTO stripped_end_hour;
 
         RETURN QUERY
-        SELECT mr.did, mr.room, mr.floor, mr.rname, mr.capacity
+        SELECT mr.did, mr.room, mr.floor, mr.rname
         FROM Meeting_Rooms mr
-        WHERE qcapacity <= mr.capacity
         EXCEPT
         -- Rooms that have sessions on the given date and within the range
-        SELECT mr.did, mr.room, mr.floor, mr.rname, mr.capacity
-        FROM Sessions s INNER JOIN Meeting_Rooms mr ON s.room = mr.room AND s.floor = mr.floor
-        WHERE qcapacity <= mr.capacity
+        SELECT mr.did, mr.room, mr.floor, mr.rname
+        FROM Sessions s INNER JOIN Meeting_Rooms mr 
+            ON s.room = mr.room 
+            AND s.floor = mr.floor
+            INNER JOIN Updates u
+            ON s.room = u.room
+            AND s.floor = u.floor 
+        WHERE qcapacity <= u.new_cap
             AND qdate = s.date
             AND s.time >= stripped_start_hour
             AND s.time < stripped_end_hour;
