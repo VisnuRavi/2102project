@@ -11,6 +11,10 @@ DROP FUNCTION IF EXISTS search_room(INTEGER, DATE, TIME, TIME) CASCADE;
 
 DROP PROCEDURE IF EXISTS leave_meeting(INTEGER, INTEGER, DATE, TIMESTAMP, INTEGER) CASCADE;
 
+-- Health functions
+DROP PROCEDURE IF EXISTS declare_health(INTEGER, DATE, FLOAT(1)) CASCADE;
+
+
 -- ###########################
 --        Basic Functions
 -- ###########################
@@ -306,8 +310,11 @@ $$ LANGUAGE plpgsql;
 --        Health Functions
 -- #############################
 
-
-
+CREATE OR REPLACE PROCEDURE declare_health(_eid INTEGER, _date DATE, _temperature FLOAT(1)) AS $$
+    BEGIN
+        INSERT INTO Health_Declaration values (_date, _eid, _temperature);
+    END;
+$$ LANGUAGE plpgsql;
 
 
 -- #############################
