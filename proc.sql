@@ -14,6 +14,9 @@ DROP PROCEDURE IF EXISTS leave_meeting(INTEGER, INTEGER, DATE, TIMESTAMP, INTEGE
 -- Health functions
 DROP PROCEDURE IF EXISTS declare_health(INTEGER, DATE, FLOAT(1)) CASCADE;
 
+-- Admin functions
+DROP FUNCTION IF EXISTS non_compliance(DATE, DATE) CASCADE;
+
 
 -- ###########################
 --        Basic Functions
@@ -321,6 +324,20 @@ $$ LANGUAGE plpgsql;
 --        Admin Functions
 -- #############################
 
+CREATE OR REPLACE FUNCTION non_compliance(start_date DATE, end_date DATE) RETURNS TABLE (
+    eid INTEGER,
+    number_of_days INTEGER
+) AS $$
+    BEGIN
+        RETURN QUERY
+        SELECT hd.eid, CAST(CAST(end_date AS DATE) - CAST(start_date AS DATE) + 1 - COUNT(*) AS INTEGER)
+        FROM Health_Declaration hd
+        WHERE hd.date >= start_date AND hd.date <= end_date
+        GROUP BY hd.eid
+        HAVING CAST(CAST(end_date AS DATE) - CAST(start_date AS DATE) + 1 - COUNT(*) AS INTEGER) > 0
+        ORDER BY CAST(CAST(end_date AS DATE) - CAST(start_date AS DATE) + 1 - COUNT(*) AS INTEGER) DESC, hd.eid;
+    END;
+$$ LANGUAGE plpgsql;
 
 -- ###########################
 --        Trigger Functions
