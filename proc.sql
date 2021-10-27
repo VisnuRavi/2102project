@@ -355,9 +355,9 @@ CREATE OR REPLACE FUNCTION FN_Contact_Numbers_Check_Max() RETURNS TRIGGER AS $$
     BEGIN
         SELECT COUNT(*) INTO contact_numbers FROM Contact_Numbers WHERE eid = NEW.eid;
         IF (contact_numbers = 3) THEN 
-            RETURN NULL;
-        ELSE
-            RETURN NEW;
+            RAISE EXCEPTION 'An employee can have at most 3 contact numbers';
         END IF;
+
+        RETURN NEW;
     END;
 $$ LANGUAGE plpgsql;
