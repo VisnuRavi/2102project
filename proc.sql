@@ -2,9 +2,10 @@
 DROP FUNCTION IF EXISTS add_department(TEXT), 
     add_employee(TEXT, TEXT, KIND, INTEGER) CASCADE;
 
-DROP PROCEDURE IF EXISTS add_room(INTEGER, INTEGER, TEXT, INTEGER) CASCADE;
-
-DROP PROCEDURE IF EXISTS change_capacity(INTEGER, INTEGER, INTEGER, DATE, INTEGER);
+DROP PROCEDURE IF EXISTS add_room(INTEGER, INTEGER, TEXT, INTEGER),
+    change_capacity(INTEGER, INTEGER, INTEGER, DATE, INTEGER),
+    remove_department(INTEGER),
+    remove_employee((INTEGER, DATE)) CASCADE;
 
 -- Core functions
 DROP FUNCTION IF EXISTS search_room(INTEGER, DATE, TIME, TIME) CASCADE;
@@ -43,7 +44,6 @@ $$ LANGUAGE plpgsql;
 
 
 CREATE OR REPLACE FUNCTION add_employee(ename TEXT, contact_number TEXT, kind KIND, did INTEGER) RETURNS VOID AS $$
-
     DECLARE
         created_eid INTEGER;
         created_email TEXT;
