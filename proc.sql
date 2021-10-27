@@ -2,10 +2,10 @@
 DROP FUNCTION IF EXISTS add_department(TEXT), 
     add_employee(TEXT, TEXT, KIND, INTEGER) CASCADE;
 
-DROP PROCEDURE IF EXISTS add_room(INTEGER, INTEGER, TEXT, INTEGER),
+DROP PROCEDURE IF EXISTS add_room(INTEGER, INTEGER, INTEGER, TEXT, INTEGER),
     change_capacity(INTEGER, INTEGER, INTEGER, DATE, INTEGER),
     remove_department(INTEGER),
-    remove_employee((INTEGER, DATE)) CASCADE;
+    remove_employee(INTEGER, DATE) CASCADE;
 
 -- Core functions
 DROP FUNCTION IF EXISTS search_room(INTEGER, DATE, TIME, TIME) CASCADE;
@@ -111,21 +111,40 @@ CREATE OR REPLACE FUNCTION search_room(qcapacity INTEGER, qdate DATE, start_hour
     rname TEXT,
     capacity INTEGER
 ) AS $$
+    DECLARE
+        stripped_start_hour TIME;
+        stripped_end_hour TIME;
     BEGIN
+        IF (end_hour <= start_hour) THEN
+            RAISE EXCEPTION 'End hour must be greater than start hour';
+        END IF;
+        
+        IF (qcapacity <= 0) THEN
+            RAISE EXCEPTION 'Capacity must be greater than 0';
+        END IF;
+
+        SELECT date_trunc('hour', start_hour) INTO stripped_start_hour;
+        SELECT date_trunc('hour', end_hour) INTO stripped_end_hour;
+
         RETURN QUERY
         SELECT mr.did, mr.room, mr.floor, mr.rname, mr.capacity
-        FROM Sessions s INNER JOIN Meeting_Rooms mr ON s.room = mr.room AND s.floor = mr.floor
-        WHERE qcapacity > mr.capacity
-            AND qdate = s.date
+        FROM Meeting_Rooms mr
+        WHERE qcapacity <= mr.capacity
         EXCEPT
         -- Rooms that have sessions on the given date and within the range
         SELECT mr.did, mr.room, mr.floor, mr.rname, mr.capacity
         FROM Sessions s INNER JOIN Meeting_Rooms mr ON s.room = mr.room AND s.floor = mr.floor
-        WHERE qcapacity > mr.capacity
+        WHERE qcapacity <= mr.capacity
             AND qdate = s.date
-            AND s.time >= start_hour
-            AND s.time < end_hour;
+            AND s.time >= stripped_start_hour
+            AND s.time < stripped_end_hour;
     END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION fnStripMinSec(_time TIME) RETURNS TIME AS $$
+    BEGIN
+        RETURN DATEADD(hour, DATEDIFF(hour, 0, _time), 0);
+    END
 $$ LANGUAGE plpgsql;
 
 
