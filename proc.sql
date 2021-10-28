@@ -16,7 +16,8 @@ DROP PROCEDURE IF EXISTS leave_meeting(INTEGER, INTEGER, DATE, TIMESTAMP, INTEGE
 DROP PROCEDURE IF EXISTS declare_health(INTEGER, DATE, FLOAT(1)) CASCADE;
 
 -- Admin functions
-DROP FUNCTION IF EXISTS non_compliance(DATE, DATE) CASCADE;
+DROP FUNCTION IF EXISTS non_compliance(DATE, DATE) CASCADE,
+    view_manager_report(DATE,INTEGER);
 
 
 -- ###########################
@@ -358,6 +359,37 @@ CREATE OR REPLACE FUNCTION non_compliance(start_date DATE, end_date DATE) RETURN
         ORDER BY CAST(CAST(end_date AS DATE) - CAST(start_date AS DATE) + 1 - COUNT(*) AS INTEGER) DESC, hd.eid;
     END;
 $$ LANGUAGE plpgsql;
+
+
+CREATE OR REPLACE FUNCTION view_manager_report(start_date DATE, approver_eid INTEGER) 
+RETURNS TABLE (
+    floor INTEGER, 
+    room INTEGER, 
+    date DATE, 
+    start_hour TIME, 
+    booker_eid INTEGER
+) AS $$
+    DECLARE
+    is_manager INTEGER;
+    manager_did INTEGER;
+    BEGIN
+    SELECT COUNT(*) INTO is_manager FROM Manager WHERE eid = approver_eid;
+    IF (is_manager > 0) THEN
+        SELECT did INTO manager_did FROM Employees WHERE eid = approver_eid;
+
+        RETURN QUERY
+        SELECT s.floor, s.room, s.date, s.time, s.booker_eid
+        FROM Meeting_Rooms mr NATURAL JOIN Sessions s
+        WHERE s.approver_eid IS NULL
+        AND mr.did = manager_did
+        AND s.date >= start_date
+        ORDER BY s.date, s.time ASC;
+    END IF;
+    END;
+$$ LANGUAGE plpgsql;
+
+
+
 
 -- ###########################
 --        Trigger Functions
