@@ -14,9 +14,11 @@ DROP PROCEDURE IF EXISTS leave_meeting(INTEGER, INTEGER, DATE, TIMESTAMP, INTEGE
 
 -- Health functions
 DROP PROCEDURE IF EXISTS declare_health(INTEGER, DATE, FLOAT(1)) CASCADE;
+DROP FUNCTION IF EXISTS three_day_employee_room(INTEGER, DATE) CASCADE;
 
 -- Admin functions
-DROP FUNCTION IF EXISTS non_compliance(DATE, DATE) CASCADE;
+DROP FUNCTION IF EXISTS non_compliance(DATE, DATE),
+    view_manager_report(DATE,INTEGER) CASCADE;
 
 
 -- ###########################
@@ -159,12 +161,12 @@ CREATE OR REPLACE PROCEDURE book_room(_floor INTEGER, _room INTEGER, _date DATE,
     BEGIN
         --this also handles when cap=0, as search room will give rooms with cap>0
         SELECT COUNT(*) INTO room_available 
-        FROM search_room(0, _date, _start_hour, _end_hour) 
+        FROM search_room(1, _date, _start_hour, _end_hour) 
         WHERE floor = _floor AND room = _room;
 
         IF (room_available > 0) THEN
             SELECT COUNT(*) INTO is_booker
-            FROM Booker
+            FROM Booker NATURAL JOIN Employees
             WHERE eid = _booker_eid
             AND resigned_date IS NULL;
             
@@ -174,8 +176,6 @@ CREATE OR REPLACE PROCEDURE book_room(_floor INTEGER, _room INTEGER, _date DATE,
                     INSERT INTO Joins VALUES (_booker_eid, _room, _floor, current_hour, _date);
                     current_hour := current_hour + INTERVAL '1 hour';
                 END LOOP;
-                
-                SELECT join_meeting(_floor, _room, _date, _start_hour, _end_hour, _booker_eid);
             ELSE
                 RAISE EXCEPTION 'Only a booker can book a meeting room';
             END IF;
@@ -342,6 +342,22 @@ CREATE OR REPLACE PROCEDURE declare_health(_eid INTEGER, _date DATE, _temperatur
 $$ LANGUAGE plpgsql;
 
 
+CREATE OR REPLACE FUNCTION three_day_employee_room(_eid INTEGER, start_date DATE)
+RETURNS TABLE (
+    floor INTEGER,
+    room INTEGER
+) AS $$
+    BEGIN
+        RETURN QUERY
+        SELECT DISTINCT j.floor, j.room
+        FROM Joins j
+        WHERE j.eid = _eid
+        AND j.date <= start_date
+        AND j.date >= start_date - 3; --should this be -3 or -2?
+    END;
+$$ LANGUAGE plpgsql;
+
+
 -- #############################
 --        Admin Functions
 -- #############################
@@ -360,6 +376,37 @@ CREATE OR REPLACE FUNCTION non_compliance(start_date DATE, end_date DATE) RETURN
         ORDER BY CAST(CAST(end_date AS DATE) - CAST(start_date AS DATE) + 1 - COUNT(*) AS INTEGER) DESC, hd.eid;
     END;
 $$ LANGUAGE plpgsql;
+
+
+CREATE OR REPLACE FUNCTION view_manager_report(start_date DATE, approver_eid INTEGER) 
+RETURNS TABLE (
+    floor INTEGER, 
+    room INTEGER, 
+    date DATE, 
+    start_hour TIME, 
+    booker_eid INTEGER
+) AS $$
+    DECLARE
+    is_manager INTEGER;
+    manager_did INTEGER;
+    BEGIN
+    SELECT COUNT(*) INTO is_manager FROM Manager WHERE eid = approver_eid;
+    IF (is_manager > 0) THEN
+        SELECT did INTO manager_did FROM Employees WHERE eid = approver_eid;
+
+        RETURN QUERY
+        SELECT s.floor, s.room, s.date, s.time, s.booker_eid
+        FROM Meeting_Rooms mr NATURAL JOIN Sessions s
+        WHERE s.approver_eid IS NULL
+        AND mr.did = manager_did
+        AND s.date >= start_date
+        ORDER BY s.date, s.time ASC;
+    END IF;
+    END;
+$$ LANGUAGE plpgsql;
+
+
+
 
 -- ###########################
 --        Trigger Functions
