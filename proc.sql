@@ -2,12 +2,22 @@
 DROP FUNCTION IF EXISTS add_department(TEXT), 
     add_employee(TEXT, TEXT, KIND, INTEGER) CASCADE;
 
-DROP PROCEDURE IF EXISTS add_room(INTEGER, INTEGER, TEXT, INTEGER) CASCADE;
+DROP PROCEDURE IF EXISTS add_room(INTEGER, INTEGER, INTEGER, TEXT, INTEGER),
+    change_capacity(INTEGER, INTEGER, INTEGER, DATE, INTEGER),
+    remove_department(INTEGER),
+    remove_employee(INTEGER, DATE) CASCADE;
 
 -- Core functions
 DROP FUNCTION IF EXISTS search_room(INTEGER, DATE, TIME, TIME) CASCADE;
 
 DROP PROCEDURE IF EXISTS leave_meeting(INTEGER, INTEGER, DATE, TIMESTAMP, INTEGER) CASCADE;
+
+-- Health functions
+DROP PROCEDURE IF EXISTS declare_health(INTEGER, DATE, FLOAT(1)) CASCADE;
+
+-- Admin functions
+DROP FUNCTION IF EXISTS non_compliance(DATE, DATE) CASCADE;
+
 
 -- ###########################
 --        Basic Functions
@@ -20,8 +30,8 @@ CREATE OR REPLACE FUNCTION add_department(dname TEXT) RETURNS VOID AS $$
 $$ LANGUAGE plpgsql;
 
 
-CREATE OR REPLACE PROCEDURE remove_department(did INTEGER) AS $$
-    DELETE FROM Departments WHERE did = did;
+CREATE OR REPLACE PROCEDURE remove_department(_did INTEGER) AS $$
+    DELETE FROM Departments WHERE did = _did;
 $$ LANGUAGE sql;
 
 
@@ -34,7 +44,6 @@ $$ LANGUAGE plpgsql;
 
 
 CREATE OR REPLACE FUNCTION add_employee(ename TEXT, contact_number TEXT, kind KIND, did INTEGER) RETURNS VOID AS $$
-
     DECLARE
         created_eid INTEGER;
         created_email TEXT;
@@ -97,30 +106,52 @@ $$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION search_room(qcapacity INTEGER, qdate DATE, start_hour TIME, end_hour TIME) RETURNS TABLE (
     did INTEGER,
-    room TEXT,
+    room INTEGER,
     floor INTEGER,
-    rname TEXT,
-    capacity INTEGER
+    rname TEXT
 ) AS $$
+    DECLARE
+        stripped_start_hour TIME;
+        stripped_end_hour TIME;
     BEGIN
+        IF (end_hour <= start_hour) THEN
+            RAISE EXCEPTION 'End hour must be greater than start hour';
+        END IF;
+        
+        IF (qcapacity <= 0) THEN
+            RAISE EXCEPTION 'Capacity must be greater than 0';
+        END IF;
+
+        SELECT date_trunc('hour', start_hour) INTO stripped_start_hour;
+        SELECT date_trunc('hour', end_hour) INTO stripped_end_hour;
+
         RETURN QUERY
-        SELECT mr.did, mr.room, mr.floor, mr.rname, mr.capacity
-        FROM Sessions s INNER JOIN Meeting_Rooms mr ON s.room = mr.room AND s.floor = mr.floor
-        WHERE qcapacity > mr.capacity
-            AND qdate = s.date
+        SELECT mr.did, mr.room, mr.floor, mr.rname
+        FROM Meeting_Rooms mr
         EXCEPT
         -- Rooms that have sessions on the given date and within the range
-        SELECT mr.did, mr.room, mr.floor, mr.rname, mr.capacity
-        FROM Sessions s INNER JOIN Meeting_Rooms mr ON s.room = mr.room AND s.floor = mr.floor
-        WHERE qcapacity > mr.capacity
+        SELECT mr.did, mr.room, mr.floor, mr.rname
+        FROM Sessions s INNER JOIN Meeting_Rooms mr 
+            ON s.room = mr.room 
+            AND s.floor = mr.floor
+            INNER JOIN Updates u
+            ON s.room = u.room
+            AND s.floor = u.floor 
+        WHERE qcapacity <= u.new_cap
             AND qdate = s.date
-            AND s.time >= start_hour
-            AND s.time < end_hour;
+            AND s.time >= stripped_start_hour
+            AND s.time < stripped_end_hour;
     END;
 $$ LANGUAGE plpgsql;
 
+CREATE OR REPLACE FUNCTION fnStripMinSec(_time TIME) RETURNS TIME AS $$
+    BEGIN
+        RETURN DATEADD(hour, DATEDIFF(hour, 0, _time), 0);
+    END
+$$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE PROCEDUTE book_room(_floor INTEGER, _room INTEGER, _date DATE, _start_hour TIME, _end_hour TIME, _booker_eid INTEGER) AS $$
+
+CREATE OR REPLACE PROCEDURE book_room(_floor INTEGER, _room INTEGER, _date DATE, _start_hour TIME, _end_hour TIME, _booker_eid INTEGER) AS $$
     DECLARE
         room_available INTEGER;
         is_booker INTEGER;
@@ -134,17 +165,20 @@ CREATE OR REPLACE PROCEDUTE book_room(_floor INTEGER, _room INTEGER, _date DATE,
         IF (room_available > 0) THEN
             SELECT COUNT(*) INTO is_booker
             FROM Booker
-            WHERE eid = _booker_eid;
+            WHERE eid = _booker_eid
+            AND resigned_date IS NULL;
             
             IF (is_booker) > 0 THEN
                 WHILE current_hour < _end_hour LOOP
                     INSERT INTO Sessions VALUES (current_hour, _date, _room, _floor, _booker_eid);
+                    INSERT INTO Joins VALUES (_booker_eid, _room, _floor, current_hour, _date);
                     current_hour := current_hour + INTERVAL '1 hour';
                 END LOOP;
                 
                 SELECT join_meeting(_floor, _room, _date, _start_hour, _end_hour, _booker_eid);
             ELSE
                 RAISE EXCEPTION 'Only a booker can book a meeting room';
+            END IF;
         ELSE
             RAISE EXCEPTION 'Meeting room is unavailable';
         END IF;
@@ -301,14 +335,31 @@ $$ LANGUAGE plpgsql;
 --        Health Functions
 -- #############################
 
-
-
+CREATE OR REPLACE PROCEDURE declare_health(_eid INTEGER, _date DATE, _temperature FLOAT(1)) AS $$
+    BEGIN
+        INSERT INTO Health_Declaration values (_date, _eid, _temperature);
+    END;
+$$ LANGUAGE plpgsql;
 
 
 -- #############################
 --        Admin Functions
 -- #############################
 
+CREATE OR REPLACE FUNCTION non_compliance(start_date DATE, end_date DATE) RETURNS TABLE (
+    eid INTEGER,
+    number_of_days INTEGER
+) AS $$
+    BEGIN
+        RETURN QUERY
+        SELECT hd.eid, CAST(CAST(end_date AS DATE) - CAST(start_date AS DATE) + 1 - COUNT(*) AS INTEGER)
+        FROM Health_Declaration hd
+        WHERE hd.date >= start_date AND hd.date <= end_date
+        GROUP BY hd.eid
+        HAVING CAST(CAST(end_date AS DATE) - CAST(start_date AS DATE) + 1 - COUNT(*) AS INTEGER) > 0
+        ORDER BY CAST(CAST(end_date AS DATE) - CAST(start_date AS DATE) + 1 - COUNT(*) AS INTEGER) DESC, hd.eid;
+    END;
+$$ LANGUAGE plpgsql;
 
 -- ###########################
 --        Trigger Functions
@@ -320,15 +371,15 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION max_contact_numbers() RETURNS TRIGGER AS $$
+CREATE OR REPLACE FUNCTION FN_Contact_Numbers_Check_Max() RETURNS TRIGGER AS $$
     DECLARE
         contact_numbers INTEGER;
     BEGIN
         SELECT COUNT(*) INTO contact_numbers FROM Contact_Numbers WHERE eid = NEW.eid;
         IF (contact_numbers = 3) THEN 
-            RETURN NULL;
-        ELSE
-            RETURN NEW;
+            RAISE EXCEPTION 'An employee can have at most 3 contact numbers';
         END IF;
+
+        RETURN NEW;
     END;
 $$ LANGUAGE plpgsql;
