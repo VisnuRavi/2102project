@@ -14,10 +14,11 @@ DROP PROCEDURE IF EXISTS leave_meeting(INTEGER, INTEGER, DATE, TIMESTAMP, INTEGE
 
 -- Health functions
 DROP PROCEDURE IF EXISTS declare_health(INTEGER, DATE, FLOAT(1)) CASCADE;
+DROP FUNCTION IF EXISTS three_day_employee_room(INTEGER, DATE) CASCADE;
 
 -- Admin functions
-DROP FUNCTION IF EXISTS non_compliance(DATE, DATE) CASCADE,
-    view_manager_report(DATE,INTEGER);
+DROP FUNCTION IF EXISTS non_compliance(DATE, DATE),
+    view_manager_report(DATE,INTEGER) CASCADE;
 
 
 -- ###########################
@@ -337,6 +338,22 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE PROCEDURE declare_health(_eid INTEGER, _date DATE, _temperature FLOAT(1)) AS $$
     BEGIN
         INSERT INTO Health_Declaration values (_date, _eid, _temperature);
+    END;
+$$ LANGUAGE plpgsql;
+
+
+CREATE OR REPLACE FUNCTION three_day_employee_room(_eid INTEGER, start_date DATE)
+RETURNS TABLE (
+    floor INTEGER,
+    room INTEGER
+) AS $$
+    BEGIN
+        RETURN QUERY
+        SELECT DISTINCT j.floor, j.room
+        FROM Joins j
+        WHERE j.eid = _eid
+        AND j.date <= start_date
+        AND j.date >= start_date - 3; --should this be -3 or -2?
     END;
 $$ LANGUAGE plpgsql;
 
