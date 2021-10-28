@@ -37,8 +37,10 @@ $$ LANGUAGE sql;
 
 CREATE OR REPLACE PROCEDURE add_room(did INTEGER, floor INTEGER, room INTEGER, rname TEXT, capacity INTEGER) AS $$
     BEGIN
-        --rather than capacity being updated here, it should be updated in UPDATES table (trigger)
-        INSERT INTO Meeting_Rooms(did, room, floor, rname, capacity) VALUES (did, room, floor, rname, capacity);
+        INSERT INTO Meeting_Rooms(did, room, floor, rname) VALUES (did, room, floor, rname);
+        --insert into updates table (non-trigger implementation)
+        INSERT INTO Updates (date,room,floor,new_cap) VALUES (CURRENT_DATE, room, floor, capacity);
+
     END
 $$ LANGUAGE plpgsql;
 
@@ -364,12 +366,6 @@ $$ LANGUAGE plpgsql;
 -- ###########################
 --        Trigger Functions
 -- ###########################
-CREATE OR REPLACE FUNCTION FN_Meeting_Rooms_AfterInsert() RETURNS TRIGGER AS $$ 
-BEGIN
-    INSERT INTO Updates (date,room,floor,new_cap) VALUES (CURRENT_DATE, NEW.room, NEW.floor, NEW.capacity);
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION FN_Contact_Numbers_Check_Max() RETURNS TRIGGER AS $$
     DECLARE

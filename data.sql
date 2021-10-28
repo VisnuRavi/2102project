@@ -226,18 +226,32 @@ INSERT INTO Manager VALUES
 (309);
 
 
-
+--capacity removed from meeting rooms
 INSERT INTO Meeting_Rooms VALUES
-(900, 0, 0, 'bigroom', 10),
-(900, 1, 0, 'smallroom', 10),
-(901, 0, 1, 'bigroom', 10),
-(901, 1, 1, 'smallroom', 10),
-(902, 0, 2, 'bigroom', 10),
-(902, 1, 2, 'smallroom', 10),
-(903, 0, 3, 'bigroom', 10),
-(903, 1, 3, 'smallroom', 10),
-(904, 0, 4, 'bigroom', 10),
-(904, 1, 4, 'smallroom', 10);
+(900, 0, 0, 'bigroom'),
+(900, 1, 0, 'smallroom'),
+(901, 0, 1, 'bigroom'),
+(901, 1, 1, 'smallroom'),
+(902, 0, 2, 'bigroom'),
+(902, 1, 2, 'smallroom'),
+(903, 0, 3, 'bigroom'),
+(903, 1, 3, 'smallroom'),
+(904, 0, 4, 'bigroom'),
+(904, 1, 4, 'smallroom');
+
+--capacity added via updates table
+INSERT INTO Updates Values
+(CURRENT_DATE, 0, 0, 6),
+(CURRENT_DATE, 1, 0, 6),
+(CURRENT_DATE, 0, 1, 6),
+(CURRENT_DATE, 1, 1, 6),
+(CURRENT_DATE, 0, 2, 6),
+(CURRENT_DATE, 1, 2, 6),
+(CURRENT_DATE, 0, 3, 6),
+(CURRENT_DATE, 1, 3, 6),
+(CURRENT_DATE, 0, 4, 6),
+(CURRENT_DATE, 1, 4, 6);
+
 
 /*
 CALL add_room(900, 0, 0, 'bigroom', 6);
@@ -276,8 +290,7 @@ INSERT INTO Sessions VALUES
 ('10:00:00', CURRENT_DATE, 0, 2, 204,NULL),
 ('10:00:00', CURRENT_DATE + 7, 0, 2, 204,NULL),
 ('10:00:00', CURRENT_DATE, 0, 3, 206,NULL),
-('10:00:00', CURRENT_DATE + 7, 0, 3, 206,NULL)
-('10:00:00' + 1, CURRENT_DATE, 0, 0, 200, NULL);
+('10:00:00', CURRENT_DATE + 7, 0, 3, 206,NULL);
 
 
 --join meetings test

@@ -89,7 +89,6 @@ CREATE TABLE Meeting_Rooms (
     room INTEGER,
     floor INTEGER,
     rname TEXT,
-    capacity INTEGER,
 
     PRIMARY KEY (room, floor),
     FOREIGN KEY (did) REFERENCES Departments
@@ -138,11 +137,6 @@ CREATE TABLE Joins (
 -- naming conv for trigger: TR_<TableName>_<ActionName>
 -- naming conv for trigger func: FN_<TableName>_<ActionName>
 -- ######################################################
-
---add a NEW entry for a NEW meetingroom in the updates table
-CREATE TRIGGER TR_Meeting_Rooms_AfterInsert
-AFTER INSERT ON Meeting_Rooms
-FOR EACH ROW EXECUTE FUNCTION FN_Meeting_Rooms_AfterInsert();
 
 CREATE TRIGGER TR_Contact_Numbers_Check_Max
 BEFORE INSERT ON Contact_Numbers
