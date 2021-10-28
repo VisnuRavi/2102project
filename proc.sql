@@ -120,7 +120,7 @@ CREATE OR REPLACE FUNCTION search_room(qcapacity INTEGER, qdate DATE, start_hour
 $$ LANGUAGE plpgsql;
 
 
-CREATE OR REPLACE PROCEDUTE book_room(_floor INTEGER, _room INTEGER, _date DATE, _start_hour TIME, _end_hour TIME, _booker_eid INTEGER) AS $$
+CREATE OR REPLACE PROCEDURE book_room(_floor INTEGER, _room INTEGER, _date DATE, _start_hour TIME, _end_hour TIME, _booker_eid INTEGER) AS $$
     DECLARE
         room_available INTEGER;
         is_booker INTEGER;
