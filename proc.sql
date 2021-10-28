@@ -159,12 +159,12 @@ CREATE OR REPLACE PROCEDURE book_room(_floor INTEGER, _room INTEGER, _date DATE,
     BEGIN
         --this also handles when cap=0, as search room will give rooms with cap>0
         SELECT COUNT(*) INTO room_available 
-        FROM search_room(0, _date, _start_hour, _end_hour) 
+        FROM search_room(1, _date, _start_hour, _end_hour) 
         WHERE floor = _floor AND room = _room;
 
         IF (room_available > 0) THEN
             SELECT COUNT(*) INTO is_booker
-            FROM Booker
+            FROM Booker NATURAL JOIN Employees
             WHERE eid = _booker_eid
             AND resigned_date IS NULL;
             
@@ -174,8 +174,6 @@ CREATE OR REPLACE PROCEDURE book_room(_floor INTEGER, _room INTEGER, _date DATE,
                     INSERT INTO Joins VALUES (_booker_eid, _room, _floor, current_hour, _date);
                     current_hour := current_hour + INTERVAL '1 hour';
                 END LOOP;
-                
-                SELECT join_meeting(_floor, _room, _date, _start_hour, _end_hour, _booker_eid);
             ELSE
                 RAISE EXCEPTION 'Only a booker can book a meeting room';
             END IF;
