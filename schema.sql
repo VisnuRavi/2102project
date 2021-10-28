@@ -145,5 +145,5 @@ AFTER INSERT ON Meeting_Rooms
 FOR EACH ROW EXECUTE FUNCTION FN_Meeting_Rooms_AfterInsert();
 
 CREATE TRIGGER TR_Contact_Numbers_Check_Max
-BEFORE INSERT on Contact_Numbers
-FOR EACH ROW EXECUTE FUNCTION max_contact_numbers(); 
+BEFORE INSERT ON Contact_Numbers
+FOR EACH ROW EXECUTE FUNCTION FN_Contact_Numbers_Check_Max(); 
