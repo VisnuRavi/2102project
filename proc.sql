@@ -377,6 +377,8 @@ RETURNS TABLE (
     END;
 $$ LANGUAGE plpgsql;
 
+CREATE OR REPLACE PROCEDURE remove_fever_employee_from_all_meetings
+
 -- #############################
 --        Admin Functions
 -- #############################
@@ -447,6 +449,34 @@ RETURNS TABLE (
     END IF;
     END;
 $$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION view_future_meeting(start_date DATE, _eid INTEGER)
+RETURNS TABLE (
+    floor INTEGER, 
+    room INTEGER, 
+    date DATE, 
+    start_hour TIME
+) AS $$
+    DECLARE
+    BEGIN
+        RETURN QUERY
+        SELECT s.floor,s.room,s.date,s.time 
+        FROM 
+        Joins j JOIN Sessions s 
+        ON 
+            j.room = s.room 
+            AND 
+            j.floor = s.floor 
+            AND 
+            s.time = j.time 
+            AND 
+            s.date = j.date 
+        WHERE 
+        s.date >= start_date AND j.eid = _eid;
+    END;
+$$ LANGUAGE plpgsql;
+
+
 
 
 
