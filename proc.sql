@@ -474,7 +474,8 @@ RETURNS TABLE (
         WHERE 
         s.date >= start_date AND j.eid = _eid
         AND
-        s.approver_eid IS NOT NULL;
+        s.approver_eid IS NOT NULL
+        ORDER BY s.date, s.time ASC;
     END;
 $$ LANGUAGE plpgsql;
 
