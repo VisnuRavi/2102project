@@ -291,6 +291,9 @@ INSERT INTO Sessions VALUES
 ('10:00:00', CURRENT_DATE + 7, 0, 2, 204,NULL),
 ('10:00:00', CURRENT_DATE, 0, 3, 206,NULL),
 ('10:00:00', CURRENT_DATE + 7, 0, 3, 206,NULL);
+--newtest
+INSERT INTO Sessions VALUES
+('10:00:00', '2007-01-01', 0, 0, 200,NULL);
 
 
 --join meetings test
@@ -305,6 +308,10 @@ INSERT INTO Joins VALUES
 (204, 0, 2, '10:00:00', CURRENT_DATE + 7),
 (206, 0, 3, '10:00:00', CURRENT_DATE),
 (206, 0, 3, '10:00:00', CURRENT_DATE + 7);
+--newtest
+INSERT INTO Joins VALUES
+(200,0,0,'10:00:00','2007-01-01'),
+(100,0,0,'10:00:00','2007-01-01');
 
 
 /*

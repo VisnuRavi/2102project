@@ -288,7 +288,7 @@ DECLARE
     max_capacity INTEGER = NULL;
     curr_emp_count INTEGER = NULL;
 BEGIN
-
+    --check if employee is alr added to a diff meeting at same time/date -> Disallow that
     IF((SELECT COUNT(*) FROM Sessions WHERE floor = _floor AND room = _room AND date = _date AND time = _time) <> 1) THEN
         RAISE EXCEPTION 'Invalid meeting information entered';
     ELSEIF ( (SELECT approver_eid FROM Sessions WHERE floor = _floor AND room = _room AND date = _date AND time = _time) IS NOT NULL) THEN
@@ -382,25 +382,8 @@ BEGIN
     --it is assumed that _eid is already known to have a fever.
     --the constraint of all future meeting is understood as: meeting's date >= current_date
 
-    --if eid is a booker
+    --delete entire sessions + join entries if _eid is a booker (trigger)
     IF(_eid IN (SELECT eid FROM Booker)) THEN
-        --delete all entries in 'Joins', where the meeting's booker is _eid
-        DELETE FROM Joins
-        WHERE
-        date >= CURRENT_DATE
-        AND
-        eid IN (SELECT j.eid
-                FROM Joins j, Sessions s
-                WHERE
-                --booker's eid = _eid
-                s.booker_eid = _eid
-                AND
-                s.room = j.room
-                AND
-                s.floor = j.floor);
-              
-        
-        --delete the session itself
         DELETE FROM Sessions
         WHERE
             booker_eid = _eid
@@ -408,7 +391,7 @@ BEGIN
             date >= CURRENT_DATE;
     END IF;
 
-    --find all instances of joins with _eid and remove them
+    --delete relevant join entries
     DELETE FROM Joins
     WHERE
         eid = _eid
@@ -536,3 +519,21 @@ CREATE OR REPLACE FUNCTION FN_Contact_Numbers_Check_Max() RETURNS TRIGGER AS $$
         RETURN NEW;
     END;
 $$ LANGUAGE plpgsql;
+
+--on deletion of a session, remove all employees attending it (regardless of approval status)
+CREATE OR REPLACE FUNCTION FN_Sessions_OnDelete_RemoveAllEmps() RETURNS TRIGGER AS $$
+    BEGIN
+        DELETE FROM Joins
+        WHERE
+            OLD.time = time
+            AND
+            OLD.date = date
+            AND
+            OLD.room = room
+            AND
+            OLD.floor = floor;
+        RETURN OLD;
+    END;
+$$ LANGUAGE plpgsql;
+
+

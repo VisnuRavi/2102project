@@ -141,3 +141,7 @@ CREATE TABLE Joins (
 CREATE TRIGGER TR_Contact_Numbers_Check_Max
 BEFORE INSERT ON Contact_Numbers
 FOR EACH ROW EXECUTE FUNCTION FN_Contact_Numbers_Check_Max(); 
+
+CREATE TRIGGER TR_Sessions_OnDelete_RemoveAllEmps
+BEFORE DELETE ON Sessions
+FOR EACH ROW EXECUTE FUNCTION FN_Sessions_OnDelete_RemoveAllEmps();
