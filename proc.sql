@@ -472,14 +472,11 @@ RETURNS TABLE (
             AND 
             s.date = j.date 
         WHERE 
-        s.date >= start_date AND j.eid = _eid;
+        s.date >= start_date AND j.eid = _eid
+        AND
+        s.approver_eid IS NOT NULL;
     END;
 $$ LANGUAGE plpgsql;
-
-
-
-
-
 
 -- ###########################
 --        Trigger Functions
