@@ -14,7 +14,8 @@ DROP PROCEDURE IF EXISTS leave_meeting(INTEGER, INTEGER, DATE, TIMESTAMP, INTEGE
 
 -- Health functions
 DROP PROCEDURE IF EXISTS declare_health(INTEGER, DATE, FLOAT(1)) CASCADE;
-DROP FUNCTION IF EXISTS three_day_employee_room(INTEGER, DATE) CASCADE;
+DROP FUNCTION IF EXISTS three_day_employee_room(INTEGER, DATE),
+    three_day_room_employee(INTEGER, INTEGER, DATE) CASCADE;
 
 -- Admin functions
 DROP FUNCTION IF EXISTS non_compliance(DATE, DATE),
@@ -360,6 +361,21 @@ RETURNS TABLE (
     END;
 $$ LANGUAGE plpgsql;
 
+CREATE OR REPLACE FUNCTION three_day_room_employee(_floor INTEGER, _room INTEGER, start_date DATE)
+RETURNS TABLE (
+    eid INTEGER
+) AS $$
+    BEGIN
+        RETURN QUERY
+        SELECT DISTINCT j.eid
+        FROM Joins j NATURAL JOIN Sessions s
+        WHERE j.floor = _floor
+        AND j.room = _room
+        AND j.date <= start_date
+        AND j.date >= start_date - 3 -- from day D-3 to day D (according to doc)
+        AND s.approver_eid IS NOT NULL; -- ensure meeting has occurred
+    END;
+$$ LANGUAGE plpgsql;
 
 -- #############################
 --        Admin Functions
@@ -380,7 +396,8 @@ CREATE OR REPLACE FUNCTION non_compliance(start_date DATE, end_date DATE) RETURN
     END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION view_booking_report(_start_date DATE, _booker_eid INTEGER) RETURNS TABLE (
+CREATE OR REPLACE FUNCTION view_booking_report(_start_date DATE, _booker_eid INTEGER) 
+RETURNS TABLE (
     floor INTEGER,
     room INTEGER,
     date DATE,
