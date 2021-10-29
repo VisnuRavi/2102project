@@ -306,6 +306,7 @@ INSERT INTO Joins VALUES
 (206, 0, 3, '10:00:00', CURRENT_DATE),
 (206, 0, 3, '10:00:00', CURRENT_DATE + 7);
 
+
 /*
 --test booker (should throw error)
 CALL join_meeting(0, 0, CURRENT_DATE, '10:00:00', 200);
