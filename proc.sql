@@ -18,6 +18,7 @@ DROP FUNCTION IF EXISTS three_day_employee_room(INTEGER, DATE) CASCADE;
 
 -- Admin functions
 DROP FUNCTION IF EXISTS non_compliance(DATE, DATE),
+    view_booking_report(DATE, INTEGER),
     view_manager_report(DATE,INTEGER) CASCADE;
 
 
@@ -379,6 +380,29 @@ CREATE OR REPLACE FUNCTION non_compliance(start_date DATE, end_date DATE) RETURN
     END;
 $$ LANGUAGE plpgsql;
 
+CREATE OR REPLACE FUNCTION view_booking_report(_start_date DATE, _booker_eid INTEGER) RETURNS TABLE (
+    floor INTEGER,
+    room INTEGER,
+    date DATE,
+    start_hour TIME,
+    is_approved INTEGER
+) AS $$
+    DECLARE
+    is_booker INTEGER;
+    BEGIN
+    SELECT COUNT(*) INTO is_booker FROM Booker b WHERE b.eid = _booker_eid;
+    IF (is_booker > 0) THEN
+        RETURN QUERY
+        SELECT s.floor, s.room, s.date, s.time, s.approver_eid
+        FROM Meeting_Rooms mr NATURAL JOIN Sessions s
+        WHERE s.booker_eid = _booker_eid
+        AND s.date >= _start_date
+        ORDER BY s.date, s.time ASC;
+    ELSE
+        RAISE EXCEPTION 'This employee could not have booked any meetings.';
+    END IF;
+    END;
+$$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION view_manager_report(start_date DATE, approver_eid INTEGER) 
 RETURNS TABLE (
