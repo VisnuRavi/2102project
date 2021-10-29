@@ -401,6 +401,31 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+CREATE OR REPLACE PROCEDURE remove_employee_from_future_meeting_seven_days(_date DATE, _eid INTEGER) AS $$
+BEGIN
+    --delete entire sessions + join entries if _eid is a booker (trigger)
+    IF(_eid IN (SELECT eid FROM Booker)) THEN
+        DELETE FROM Sessions
+        WHERE
+            booker_eid = _eid
+            AND
+            date >= _date
+            AND
+            date <= _date + 7;
+    END IF;
+
+    --delete relevant join entries
+    DELETE FROM Joins
+    WHERE
+        eid = _eid
+        AND
+        date >= _date
+        AND
+        date <= _date + 7;
+END;
+$$ LANGUAGE plpgsql;
+
+
 
 -- #############################
 --        Admin Functions
