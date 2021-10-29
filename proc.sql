@@ -377,7 +377,47 @@ RETURNS TABLE (
     END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE PROCEDURE remove_fever_employee_from_all_meetings
+CREATE OR REPLACE PROCEDURE remove_fever_employee_from_all_meetings(_eid INTEGER) AS $$
+BEGIN
+    --it is assumed that _eid is already known to have a fever.
+    --the constraint of all future meeting is understood as: meeting's date >= current_date
+
+    --if eid is a booker
+    IF(_eid IN (SELECT eid FROM Booker)) THEN
+        --delete all entries in 'Joins', where the meeting's booker is _eid
+        DELETE FROM Joins
+        WHERE
+        date >= CURRENT_DATE
+        AND
+        eid IN (SELECT j.eid
+                FROM Joins j, Sessions s
+                WHERE
+                --booker's eid = _eid
+                s.booker_eid = _eid
+                AND
+                s.room = j.room
+                AND
+                s.floor = j.floor);
+              
+        
+        --delete the session itself
+        DELETE FROM Sessions
+        WHERE
+            booker_eid = _eid
+            AND
+            date >= CURRENT_DATE;
+    END IF;
+
+    --find all instances of joins with _eid and remove them
+    DELETE FROM Joins
+    WHERE
+        eid = _eid
+        AND
+        date >= CURRENT_DATE;
+
+END;
+$$ LANGUAGE plpgsql;
+
 
 -- #############################
 --        Admin Functions
@@ -459,6 +499,7 @@ RETURNS TABLE (
 ) AS $$
     DECLARE
     BEGIN
+        --since only approved meetings can be viewed, need 'Sessions' table as well.
         RETURN QUERY
         SELECT s.floor,s.room,s.date,s.time 
         FROM 
