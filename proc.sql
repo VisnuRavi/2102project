@@ -17,7 +17,7 @@ DROP PROCEDURE IF EXISTS
     book_room(INTEGER, INTEGER, DATE, TIME, TIME, INTEGER),
     unbook_room(INTEGER, INTEGER, DATE, TIME, TIME, INTEGER),
     join_meeting(INTEGER, INTEGER, DATE, TIME, INTEGER),
-    leave_meeting(INTEGER, INTEGER, DATE, TIMESTAMP, INTEGER),
+    leave_meeting(INTEGER, INTEGER, DATE, TIME, INTEGER),
     approve_meeting(INTEGER, INTEGER, DATE, TIME, INTEGER)
 CASCADE;
 
@@ -210,10 +210,26 @@ CREATE OR REPLACE PROCEDURE unbook_room(_floor INTEGER, _room INTEGER, _date DAT
 AS $$
     DECLARE
         is_booker INTEGER;
+        session_exists INTEGER;
         current_hour_check TIME := _start_hour;
         current_hour_remove TIME := _start_hour;
     BEGIN
+        IF _start_hour >= _end_hour THEN
+            RAISE EXCEPTION 'Start hour should be earlier than end hour';
+        END IF;
+
         WHILE current_hour_check < _end_hour LOOP
+            SELECT COUNT(*) INTO session_exists
+            FROM Sessions s
+            WHERE s.floor = _floor AND
+            s.room = _room AND
+            s.date = _date AND
+            s.time = current_hour_check;
+
+            IF (session_exists) = 0 THEN
+                RAISE EXCEPTION 'Not all sessions in this time range have been booked';
+            END IF;
+
             SELECT s.booker_eid INTO is_booker
             FROM Sessions s
             WHERE s.floor = _floor AND
@@ -304,7 +320,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE PROCEDURE leave_meeting(_floor INTEGER, _room INTEGER, _date DATE, _time TIMESTAMP, 
+CREATE OR REPLACE PROCEDURE leave_meeting(_floor INTEGER, _room INTEGER, _date DATE, _time TIME, 
     _eid INTEGER) 
 AS $$
     DECLARE
