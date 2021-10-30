@@ -171,6 +171,26 @@ CREATE OR REPLACE FUNCTION search_room(qcapacity INTEGER, qdate DATE, start_hour
     END;
 $$ LANGUAGE plpgsql;
 
+
+/*CREATE OR REPLACE FUNCTION employee_concurrent_meeting(_eid INTEGER, _date DATE, _start_hour TIME, _end_hour TIME) 
+RETURNS BOOLEAN AS $$
+    DECLARE
+        in_concurrent_meeting BOOLEAN := FALSE;
+        count INTEGER;
+    BEGIN
+        WHILE _start_hour < _end_hour LOOP
+            SELECT COUNT(*) INTO count FROM Joins WHERE eid = _eid AND date = _date AND time = _start_hour;
+            IF count = 1 THEN
+                in_concurrent_meeting := TRUE;
+                EXIT;
+            END IF;
+            _start_hour := _start_hour + 1; 
+        END LOOP;
+        RETURN in_concurrent_meeting;
+    END;
+$$ LANGUAGE plpgsql;*/
+
+
 CREATE OR REPLACE PROCEDURE book_room(_floor INTEGER, _room INTEGER, _date DATE, _start_hour TIME, 
     _end_hour TIME, _booker_eid INTEGER) 
 AS $$
@@ -178,29 +198,42 @@ AS $$
         room_available INTEGER;
         is_booker INTEGER;
         current_hour TIME := _start_hour;
+        have_fever BOOLEAN;
     BEGIN
-        --this also handles when cap=0, as search room will give rooms with cap>0
-        SELECT COUNT(*) INTO room_available 
-        FROM search_room(1, _date, _start_hour, _end_hour) 
-        WHERE floor = _floor AND room = _room;
+        --Raise notice 'cur time %', CURRENT_TIME;
+        IF (_date = CURRENT_DATE AND _start_hour > CURRENT_TIME) OR _date > CURRENT_DATE THEN
+            --this also handles when cap=0, as search room will give rooms with cap>0
+            SELECT COUNT(*) INTO room_available 
+            FROM search_room(1, _date, _start_hour, _end_hour) 
+            WHERE floor = _floor AND room = _room;
 
-        IF (room_available > 0) THEN
-            SELECT COUNT(*) INTO is_booker
-            FROM Booker NATURAL JOIN Employees
-            WHERE eid = _booker_eid
-            AND resigned_date IS NULL;
-            
-            IF (is_booker) > 0 THEN
-                WHILE current_hour < _end_hour LOOP
-                    INSERT INTO Sessions VALUES (current_hour, _date, _room, _floor, _booker_eid);
-                    INSERT INTO Joins VALUES (_booker_eid, _room, _floor, current_hour, _date);
-                    current_hour := current_hour + INTERVAL '1 hour';
-                END LOOP;
+            IF (room_available > 0) THEN
+                SELECT fever INTO have_fever FROM Health_Declaration WHERE date = CURRENT_DATE AND eid = _booker_eid;
+                IF have_fever IS NULL THEN
+                    RAISE EXCEPTION 'Employees that have not made their health declaration cannot book a room';
+                ELSEIF have_fever = TRUE THEN
+                    RAISE EXCEPTION 'Employees having a fever cannot book a room';
+                END IF;
+
+                SELECT COUNT(*) INTO is_booker
+                FROM Booker NATURAL JOIN Employees
+                WHERE eid = _booker_eid
+                AND resigned_date IS NULL;
+
+                IF (is_booker) > 0 THEN
+                    WHILE current_hour < _end_hour LOOP
+                        INSERT INTO Sessions VALUES (current_hour, _date, _room, _floor, _booker_eid);
+                        INSERT INTO Joins VALUES (_booker_eid, _room, _floor, current_hour, _date);
+                        current_hour := current_hour + INTERVAL '1 hour';
+                    END LOOP;
+                ELSE
+                    RAISE EXCEPTION 'Only a booker can book a meeting room';
+                END IF;
             ELSE
-                RAISE EXCEPTION 'Only a booker can book a meeting room';
+                RAISE EXCEPTION 'Meeting room is unavailable';
             END IF;
         ELSE
-            RAISE EXCEPTION 'Meeting room is unavailable';
+            RAISE EXCEPTION 'Bookings can only be made for future meetings';
         END IF;
     END;
 $$ LANGUAGE plpgsql;
