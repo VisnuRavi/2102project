@@ -11,7 +11,6 @@ CASCADE;
 -- Core functions
 DROP FUNCTION IF EXISTS 
     search_room(INTEGER, DATE, TIME, TIME),
-    fnStripMinSec(TIME)
 CASCADE;
 
 DROP PROCEDURE IF EXISTS 
@@ -170,12 +169,6 @@ CREATE OR REPLACE FUNCTION search_room(qcapacity INTEGER, qdate DATE, start_hour
             AND s.time >= stripped_start_hour
             AND s.time < stripped_end_hour;
     END;
-$$ LANGUAGE plpgsql;
-
-CREATE OR REPLACE FUNCTION fnStripMinSec(_time TIME) RETURNS TIME AS $$
-    BEGIN
-        RETURN DATEADD(hour, DATEDIFF(hour, 0, _time), 0);
-    END
 $$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE PROCEDURE book_room(_floor INTEGER, _room INTEGER, _date DATE, _start_hour TIME, 
