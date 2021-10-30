@@ -151,21 +151,21 @@ CREATE OR REPLACE FUNCTION search_room(qcapacity INTEGER, qdate DATE, start_hour
         RETURN QUERY
         SELECT mr.did, mr.room, mr.floor, mr.rname
         FROM Meeting_Rooms mr
+        WHERE qcapacity <= (
+            SELECT new_cap 
+            FROM Updates u 
+            WHERE u.room = mr.room 
+                AND u.floor = mr.floor
+                AND u.date <= qdate
+            ORDER BY u.date DESC
+            LIMIT 1
+        )
         EXCEPT
         -- Rooms that have sessions on the given date and within the range
         SELECT mr.did, mr.room, mr.floor, mr.rname
         FROM Sessions s INNER JOIN Meeting_Rooms mr 
             ON s.room = mr.room 
             AND s.floor = mr.floor
-        WHERE qcapacity <= (
-                SELECT new_CAP 
-                FROM Updates u 
-                WHERE u.room = s.room 
-                    AND u.floor = s.floor
-                    AND u.date <= qdate
-                ORDER BY date DESC
-                LIMIT 1
-            )
             AND qdate = s.date
             AND s.time >= stripped_start_hour
             AND s.time < stripped_end_hour;
