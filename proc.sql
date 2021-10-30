@@ -240,6 +240,8 @@ DECLARE
     curr_emp_count INTEGER = NULL;
 BEGIN
     --check if employee is alr added to a diff meeting at same time/date -> Disallow that
+    --dissallow to join past meetings
+    --resign
     IF((SELECT COUNT(*) FROM Sessions WHERE floor = _floor AND room = _room AND date = _date AND time = _time) <> 1) THEN
         RAISE EXCEPTION 'Invalid meeting information entered';
     ELSEIF ((SELECT approver_eid FROM Sessions WHERE floor = _floor AND room = _room AND date = _date AND time = _time) IS NOT NULL) THEN
@@ -319,6 +321,7 @@ CREATE OR REPLACE PROCEDURE approve_meeting(_floor INTEGER, _room INTEGER, _date
         a_eid INTEGER = NULL;
     BEGIN
         --valid manager_check
+        --prevent past meeting 
         SELECT did INTO room_dept FROM Meeting_Rooms WHERE floor = _floor AND room = _room;
         IF((SELECT resigned_date FROM Employees WHERE eid = _eid) IS NOT NULL) THEN
             RAISE EXCEPTION 'Attempt by resigned employee to approve room';
@@ -611,6 +614,8 @@ CREATE OR REPLACE FUNCTION FN_Sessions_OnDelete_RemoveAllEmps() RETURNS TRIGGER 
             OLD.room = room
             AND
             OLD.floor = floor;
+
+        RAISE NOTICE 'session on %, %, room: %, floor: %, has been deleted',OLD.date, OLD.time, OLD.room, OLD.floor;
         RETURN OLD;
     END;
 $$ LANGUAGE plpgsql;
@@ -618,9 +623,8 @@ $$ LANGUAGE plpgsql;
 --on adding on a updates entry, check validity of all rooms pertaining to the entry, delete them if invalid
 CREATE OR REPLACE FUNCTION FN_Updates_OnAdd_CheckSessionValidity() RETURNS TRIGGER AS $$
     BEGIN
-  
        WITH invalid_sessions AS (
-            SELECT *
+            SELECT s.time, s.date, s.room, s.floor, s.booker_eid, s.approver_eid
             FROM Sessions s, 
                 (SELECT j.time, j.date, COUNT(*) AS participants
                 FROM Joins j
@@ -644,15 +648,34 @@ CREATE OR REPLACE FUNCTION FN_Updates_OnAdd_CheckSessionValidity() RETURNS TRIGG
                 p.participants > NEW.new_cap
        )
         DELETE FROM Sessions s2 
-        INNER JOIN invalid_sessions
-        ON
-            s2.time = invalid_sessions.time
+        USING invalid_sessions invs
+        WHERE
+            s2.time = invs.time
             AND
-            s2.date = invalid_sessions.date
+            s2.date = invs.date
             AND
-            s2.room = invalid_sessions.room
+            s2.room = invs.room
             AND
-            s2.floor = invalid_sessions.floor;
+            s2.floor = invs.floor;
+        RETURN OLD;
     END;
 $$ LANGUAGE plpgsql;
+
+-- ########################################################################
+--       Triggers
+-- naming conv for trigger: TR_<TableName>_<ActionName>
+-- naming conv for trigger func: FN_<TableName>_<ActionName>
+-- ######################################################
+
+CREATE TRIGGER TR_Contact_Numbers_Check_Max
+BEFORE INSERT ON Contact_Numbers
+FOR EACH ROW EXECUTE FUNCTION FN_Contact_Numbers_Check_Max(); 
+
+CREATE TRIGGER TR_Sessions_OnDelete_RemoveAllEmps
+BEFORE DELETE ON Sessions
+FOR EACH ROW EXECUTE FUNCTION FN_Sessions_OnDelete_RemoveAllEmps();
+
+CREATE TRIGGER TR_Updates_OnAdd_CheckSessionValidity
+AFTER INSERT ON Updates
+FOR EACH ROW EXECUTE FUNCTION FN_Updates_OnAdd_CheckSessionValidity();
 

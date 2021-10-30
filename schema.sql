@@ -132,20 +132,3 @@ CREATE TABLE Joins (
     FOREIGN KEY (eid) REFERENCES Employees
 ); 
 
--- ########################################################################
---       Triggers
--- naming conv for trigger: TR_<TableName>_<ActionName>
--- naming conv for trigger func: FN_<TableName>_<ActionName>
--- ######################################################
-
-CREATE TRIGGER TR_Contact_Numbers_Check_Max
-BEFORE INSERT ON Contact_Numbers
-FOR EACH ROW EXECUTE FUNCTION FN_Contact_Numbers_Check_Max(); 
-
-CREATE TRIGGER TR_Sessions_OnDelete_RemoveAllEmps
-BEFORE DELETE ON Sessions
-FOR EACH ROW EXECUTE FUNCTION FN_Sessions_OnDelete_RemoveAllEmps();
-
-CREATE TRIGGER TR_Updates_OnAdd_CheckSessionValidity
-AFTER INSERT ON Updates
-FOR EACH ROW EXECUTE FUNCTION FN_Updates_OnAdd_CheckSessionValidity();
