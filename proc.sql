@@ -411,7 +411,7 @@ RETURNS TABLE (
         FROM Joins j NATURAL JOIN Sessions s
         WHERE j.eid = _eid
         AND j.date <= start_date
-        AND j.date >= start_date - 3; -- from day D-3 to day D (according to doc)
+        AND j.date >= start_date - 3 -- from day D-3 to day D (according to doc)
         AND s.approver_eid IS NOT NULL; -- ensure meeting has occurred
     END;
 $$ LANGUAGE plpgsql;
