@@ -346,25 +346,43 @@ CREATE OR REPLACE PROCEDURE declare_health(_eid INTEGER, _date DATE, _temperatur
     END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION contact_tracing(_eid INTEGER, _date DATE) RETURNS VOID AS $$
+CREATE OR REPLACE FUNCTION contact_tracing(_eid INTEGER, _date DATE) RETURNS TABLE (
+    eid INTEGER
+) AS $$
     DECLARE
         is_fever BOOLEAN;
-        curs CURSOR FOR (SELECT room, floor FROM three_day_employee_room(_eid, _date));
+        temp_mr RECORD;
+        temp_eid RECORD;
     BEGIN
         SELECT fever FROM Health_Declaration WHERE eid = _eid INTO is_fever;
 
+        CREATE TABLE result(eid INTEGER);
+
         IF (is_fever = FALSE) THEN
-            RETURN;
+            RETURN QUERY SELECT eid FROM result;
         END IF;
 
         -- remove the fever employee from all future meeting room booking, approved or not
+        CALL remove_fever_employee_from_all_meetings(_eid);
 
-        -- find all meeting rooms the employee had a meeting in in the past 3 days
-            SELECT room, floor
-            FROM three_day_employee_room(_eid, _date);
-        -- find all employees that were in the meeting room(s) in the past 3 days 
 
-        -- removes the employees from future meeting (both approved and not approved) in the next 7 days
+        FOR temp_mr IN 
+            -- find all meeting rooms the employee had a meeting in in the past 3 days
+            SELECT room, floor FROM three_day_employee_room(_eid, _date)
+        LOOP    
+            -- find all employees that were in the meeting room in the past 3 days
+            FOR temp_eid IN
+                SELECT eid FROM three_day_room_employee(temp_mr.room, temp_mr.floor)
+            LOOP
+                -- removes the employee from future meeting (both approved and not approved) in the next 7 days
+                CALL remove_employee_from_future_meeting_seven_days(temp_eid.eid);
+                
+                -- add the eid to our result
+                INSERT INTO result values(temp_eid.eid);
+            END LOOP;
+        END LOOP;
+
+        RETURN QUERY SELECT DISTINCT eid FROM result ORDER BY eid;
     END;
 $$ LANGUAGE plpgsql;
 
@@ -400,7 +418,6 @@ RETURNS TABLE (
     END;
 $$ LANGUAGE plpgsql;
 
-<<<<<<< Updated upstream
 CREATE OR REPLACE PROCEDURE remove_fever_employee_from_all_meetings(_eid INTEGER) AS $$
 BEGIN
     --it is assumed that _eid is already known to have a fever.
