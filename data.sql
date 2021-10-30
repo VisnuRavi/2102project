@@ -279,6 +279,14 @@ CALL change_capacity(4, 0, 2, CURRENT_DATE + 7, 308);
 CALL change_capacity(4, 1, 2, CURRENT_DATE + 7, 309);
 */
 
+
+/*
+--test for capacity change
+CALL change_capacity(0, 0, 2, CURRENT_DATE + 1, 300);
+CALL change_capacity(1, 0, 2, CURRENT_DATE + 1, 302);
+CALL change_capacity(2, 0, 2, CURRENT_DATE + 1, 304);
+*/
+
 --creating 8 sessions -> 2 per department -> same meeting room per dept, but different dates (cap change)
 --booker id -> senior
 --approver_id = NULL
@@ -291,16 +299,15 @@ INSERT INTO Sessions VALUES
 ('10:00:00', CURRENT_DATE + 7, 0, 2, 204,NULL),
 ('10:00:00', CURRENT_DATE, 0, 3, 206,NULL),
 ('10:00:00', CURRENT_DATE + 7, 0, 3, 206,NULL);
---newtest
+
+
+/*
+--test for capacity change
 INSERT INTO Sessions VALUES
-('10:00:00', '2007-01-01', 0, 0, 200,NULL);
-
---newertest
--- INSERT INTO Sessions VALUES
--- ('10:00:00', CURRENT_DATE + 6, 0, 0, 200,NULL),
--- ('10:00:00', CURRENT_DATE + 7, 0, 0, 200,NULL),
--- ('10:00:00', CURRENT_DATE + 8, 0, 0, 200,NULL);
-
+('10:00:00', CURRENT_DATE + 6, 0, 0, 200,NULL),
+('10:00:00', CURRENT_DATE + 7, 0, 0, 200,NULL),
+('10:00:00', CURRENT_DATE + 8, 0, 0, 200,NULL);
+*/
 
 
 --join meetings test
@@ -315,22 +322,6 @@ INSERT INTO Joins VALUES
 (204, 0, 2, '10:00:00', CURRENT_DATE + 7),
 (206, 0, 3, '10:00:00', CURRENT_DATE),
 (206, 0, 3, '10:00:00', CURRENT_DATE + 7);
---newtest
-INSERT INTO Joins VALUES
-(200,0,0,'10:00:00','2007-01-01'),
-(100,0,0,'10:00:00','2007-01-01');
-
--- INSERT INTO Joins VALUES
--- (200,0,0,'10:00:00',CURRENT_DATE+6),
--- (200,0,0,'10:00:00',CURRENT_DATE+7),
--- (200,0,0,'10:00:00',CURRENT_DATE+8);
-
--- INSERT INTO Joins VALUES
--- (101,0,0,'10:00:00',CURRENT_DATE+6),
--- (201,0,0,'10:00:00',CURRENT_DATE+7),
--- (301,0,0,'10:00:00',CURRENT_DATE+8);
-
-
 
 
 /*
@@ -351,4 +342,42 @@ CALL join_meeting(0, 0, CURRENT_DATE + 7, '10:00:00', 101);
 CALL join_meeting(0, 0, CURRENT_DATE + 7, '10:00:00', 201);
 CALL join_meeting(0, 0, CURRENT_DATE + 7, '10:00:00', 300);
 CALL join_meeting(0, 0, CURRENT_DATE + 7, '10:00:00', 301);
+*/
+
+
+/*
+--test for capacity change
+CALL join_meeting(0, 0, CURRENT_DATE, '10:00:00', 100);
+CALL join_meeting(0, 0, CURRENT_DATE, '10:00:00', 101);
+CALL join_meeting(0, 0, CURRENT_DATE, '10:00:00', 201);
+CALL join_meeting(0, 0, CURRENT_DATE, '10:00:00', 300);
+CALL join_meeting(0, 0, CURRENT_DATE, '10:00:00', 301);
+CALL join_meeting(0, 0, CURRENT_DATE + 7, '10:00:00', 100);
+CALL join_meeting(0, 0, CURRENT_DATE + 7, '10:00:00', 101);
+CALL join_meeting(0, 0, CURRENT_DATE + 7, '10:00:00', 201);
+CALL join_meeting(0, 0, CURRENT_DATE + 7, '10:00:00', 300);
+CALL join_meeting(0, 0, CURRENT_DATE + 7, '10:00:00', 301);
+
+
+CALL join_meeting(1, 0, CURRENT_DATE, '10:00:00', 102);
+CALL join_meeting(1, 0, CURRENT_DATE, '10:00:00', 103);
+CALL join_meeting(1, 0, CURRENT_DATE, '10:00:00', 203);
+CALL join_meeting(1, 0, CURRENT_DATE, '10:00:00', 302);
+CALL join_meeting(1, 0, CURRENT_DATE, '10:00:00', 303);
+CALL join_meeting(1, 0, CURRENT_DATE + 7, '10:00:00', 102);
+CALL join_meeting(1, 0, CURRENT_DATE + 7, '10:00:00', 103);
+CALL join_meeting(1, 0, CURRENT_DATE + 7, '10:00:00', 203);
+CALL join_meeting(1, 0, CURRENT_DATE + 7, '10:00:00', 302);
+CALL join_meeting(1, 0, CURRENT_DATE + 7, '10:00:00', 303);
+
+CALL join_meeting(2, 0, CURRENT_DATE, '10:00:00', 104);
+CALL join_meeting(2, 0, CURRENT_DATE, '10:00:00', 105);
+CALL join_meeting(2, 0, CURRENT_DATE, '10:00:00', 205);
+CALL join_meeting(2, 0, CURRENT_DATE, '10:00:00', 304);
+CALL join_meeting(2, 0, CURRENT_DATE, '10:00:00', 305);
+CALL join_meeting(2, 0, CURRENT_DATE + 7, '10:00:00', 104);
+CALL join_meeting(2, 0, CURRENT_DATE + 7, '10:00:00', 105);
+CALL join_meeting(2, 0, CURRENT_DATE + 7, '10:00:00', 205);
+CALL join_meeting(2, 0, CURRENT_DATE + 7, '10:00:00', 304);
+CALL join_meeting(2, 0, CURRENT_DATE + 7, '10:00:00', 305);
 */

@@ -257,6 +257,8 @@ DECLARE
     curr_emp_count INTEGER = NULL;
 BEGIN
     --check if employee is alr added to a diff meeting at same time/date -> Disallow that
+    --dissallow to join past meetings
+    --resign
     IF((SELECT COUNT(*) FROM Sessions WHERE floor = _floor AND room = _room AND date = _date AND time = _time) <> 1) THEN
         RAISE EXCEPTION 'Invalid meeting information entered';
     ELSEIF ((SELECT approver_eid FROM Sessions WHERE floor = _floor AND room = _room AND date = _date AND time = _time) IS NOT NULL) THEN
@@ -336,6 +338,7 @@ CREATE OR REPLACE PROCEDURE approve_meeting(_floor INTEGER, _room INTEGER, _date
         a_eid INTEGER = NULL;
     BEGIN
         --valid manager_check
+        --prevent past meeting 
         SELECT did INTO room_dept FROM Meeting_Rooms WHERE floor = _floor AND room = _room;
         IF((SELECT resigned_date FROM Employees WHERE eid = _eid) IS NOT NULL) THEN
             RAISE EXCEPTION 'Attempt by resigned employee to approve room';
@@ -599,3 +602,4 @@ RETURNS TABLE (
     END IF;
     END;
 $$ LANGUAGE plpgsql;
+

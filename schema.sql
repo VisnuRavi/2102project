@@ -132,6 +132,7 @@ CREATE TABLE Joins (
     FOREIGN KEY (eid) REFERENCES Employees
 ); 
 
+
 -- ###########################
 --        Trigger Functions
 -- ###########################
@@ -161,6 +162,49 @@ CREATE OR REPLACE FUNCTION FN_Sessions_OnDelete_RemoveAllEmps() RETURNS TRIGGER 
             OLD.room = room
             AND
             OLD.floor = floor;
+
+        RAISE NOTICE 'session on %, %, room: %, floor: %, has been deleted',OLD.date, OLD.time, OLD.room, OLD.floor;
+        RETURN OLD;
+    END;
+$$ LANGUAGE plpgsql;
+
+--on adding on a updates entry, check validity of all rooms pertaining to the entry, delete them if invalid
+CREATE OR REPLACE FUNCTION FN_Updates_OnAdd_CheckSessionValidity() RETURNS TRIGGER AS $$
+    BEGIN
+       WITH invalid_sessions AS (
+            SELECT s.time, s.date, s.room, s.floor, s.booker_eid, s.approver_eid
+            FROM Sessions s, 
+                (SELECT j.time, j.date, COUNT(*) AS participants
+                FROM Joins j
+                WHERE
+                    NEW.floor = j.floor
+                    AND
+                    NEW.room = j.room
+                    AND
+                    j.date >= NEW.date
+                GROUP BY j.time, j.date) AS p
+            WHERE
+                s.floor = NEW.floor
+                AND
+                s.room = NEW.room
+                AND
+                s.time = p.time
+                AND
+                s.date = p.date
+                AND
+                --check session validity
+                p.participants > NEW.new_cap
+       )
+        DELETE FROM Sessions s2 
+        USING invalid_sessions invs
+        WHERE
+            s2.time = invs.time
+            AND
+            s2.date = invs.date
+            AND
+            s2.room = invs.room
+            AND
+            s2.floor = invs.floor;
         RETURN OLD;
     END;
 $$ LANGUAGE plpgsql;
@@ -178,3 +222,7 @@ FOR EACH ROW EXECUTE FUNCTION FN_Contact_Numbers_Check_Max();
 CREATE TRIGGER TR_Sessions_OnDelete_RemoveAllEmps
 BEFORE DELETE ON Sessions
 FOR EACH ROW EXECUTE FUNCTION FN_Sessions_OnDelete_RemoveAllEmps();
+
+CREATE TRIGGER TR_Updates_OnAdd_CheckSessionValidity
+AFTER INSERT ON Updates
+FOR EACH ROW EXECUTE FUNCTION FN_Updates_OnAdd_CheckSessionValidity();
