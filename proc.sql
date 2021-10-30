@@ -15,7 +15,8 @@ DROP PROCEDURE IF EXISTS leave_meeting(INTEGER, INTEGER, DATE, TIMESTAMP, INTEGE
 -- Health functions
 DROP PROCEDURE IF EXISTS declare_health(INTEGER, DATE, FLOAT(1)) CASCADE;
 DROP FUNCTION IF EXISTS three_day_employee_room(INTEGER, DATE),
-    three_day_room_employee(INTEGER, INTEGER, DATE) CASCADE;
+    three_day_room_employee(INTEGER, INTEGER, DATE),
+    contact_tracing(INTEGER, DATE) CASCADE;
 
 -- Admin functions
 DROP FUNCTION IF EXISTS non_compliance(DATE, DATE),
@@ -345,6 +346,28 @@ CREATE OR REPLACE PROCEDURE declare_health(_eid INTEGER, _date DATE, _temperatur
     END;
 $$ LANGUAGE plpgsql;
 
+CREATE OR REPLACE FUNCTION contact_tracing(_eid INTEGER, _date DATE) RETURNS VOID AS $$
+    DECLARE
+        is_fever BOOLEAN;
+        curs CURSOR FOR (SELECT room, floor FROM three_day_employee_room(_eid, _date));
+    BEGIN
+        SELECT fever FROM Health_Declaration WHERE eid = _eid INTO is_fever;
+
+        IF (is_fever = FALSE) THEN
+            RETURN;
+        END IF;
+
+        -- remove the fever employee from all future meeting room booking, approved or not
+
+        -- find all meeting rooms the employee had a meeting in in the past 3 days
+            SELECT room, floor
+            FROM three_day_employee_room(_eid, _date);
+        -- find all employees that were in the meeting room(s) in the past 3 days 
+
+        -- removes the employees from future meeting (both approved and not approved) in the next 7 days
+    END;
+$$ LANGUAGE plpgsql;
+
 
 CREATE OR REPLACE FUNCTION three_day_employee_room(_eid INTEGER, start_date DATE)
 RETURNS TABLE (
@@ -377,6 +400,7 @@ RETURNS TABLE (
     END;
 $$ LANGUAGE plpgsql;
 
+<<<<<<< Updated upstream
 CREATE OR REPLACE PROCEDURE remove_fever_employee_from_all_meetings(_eid INTEGER) AS $$
 BEGIN
     --it is assumed that _eid is already known to have a fever.
@@ -424,8 +448,6 @@ BEGIN
         date <= _date + 7;
 END;
 $$ LANGUAGE plpgsql;
-
-
 
 -- #############################
 --        Admin Functions
