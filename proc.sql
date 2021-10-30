@@ -10,15 +10,14 @@ CASCADE;
 
 -- Core functions
 DROP FUNCTION IF EXISTS 
-    search_room(INTEGER, DATE, TIME, TIME),
-    fnStripMinSec(TIME)
+    search_room(INTEGER, DATE, TIME, TIME)
 CASCADE;
 
 DROP PROCEDURE IF EXISTS 
     book_room(INTEGER, INTEGER, DATE, TIME, TIME, INTEGER),
-    unbook_room(INTEGER, INTEGER, DATE, TIMESTAMP, INTEGER),
+    unbook_room(INTEGER, INTEGER, DATE, TIME, TIME, INTEGER),
     join_meeting(INTEGER, INTEGER, DATE, TIME, INTEGER),
-    leave_meeting(INTEGER, INTEGER, DATE, TIMESTAMP, INTEGER),
+    leave_meeting(INTEGER, INTEGER, DATE, TIME, INTEGER),
     approve_meeting(INTEGER, INTEGER, DATE, TIME, INTEGER)
 CASCADE;
 
@@ -151,32 +150,46 @@ CREATE OR REPLACE FUNCTION search_room(qcapacity INTEGER, qdate DATE, start_hour
         RETURN QUERY
         SELECT mr.did, mr.room, mr.floor, mr.rname
         FROM Meeting_Rooms mr
+        WHERE qcapacity <= (
+            SELECT new_cap 
+            FROM Updates u 
+            WHERE u.room = mr.room 
+                AND u.floor = mr.floor
+                AND u.date <= qdate
+            ORDER BY u.date DESC
+            LIMIT 1
+        )
         EXCEPT
         -- Rooms that have sessions on the given date and within the range
         SELECT mr.did, mr.room, mr.floor, mr.rname
         FROM Sessions s INNER JOIN Meeting_Rooms mr 
             ON s.room = mr.room 
             AND s.floor = mr.floor
-        WHERE qcapacity <= (
-                SELECT new_CAP 
-                FROM Updates u 
-                WHERE u.room = s.room 
-                    AND u.floor = s.floor
-                    AND u.date <= qdate
-                ORDER BY date DESC
-                LIMIT 1
-            )
             AND qdate = s.date
             AND s.time >= stripped_start_hour
             AND s.time < stripped_end_hour;
     END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION fnStripMinSec(_time TIME) RETURNS TIME AS $$
+
+/*CREATE OR REPLACE FUNCTION employee_concurrent_meeting(_eid INTEGER, _date DATE, _start_hour TIME, _end_hour TIME) 
+RETURNS BOOLEAN AS $$
+    DECLARE
+        in_concurrent_meeting BOOLEAN := FALSE;
+        count INTEGER;
     BEGIN
-        RETURN DATEADD(hour, DATEDIFF(hour, 0, _time), 0);
-    END
-$$ LANGUAGE plpgsql;
+        WHILE _start_hour < _end_hour LOOP
+            SELECT COUNT(*) INTO count FROM Joins WHERE eid = _eid AND date = _date AND time = _start_hour;
+            IF count = 1 THEN
+                in_concurrent_meeting := TRUE;
+                EXIT;
+            END IF;
+            _start_hour := _start_hour + 1; 
+        END LOOP;
+        RETURN in_concurrent_meeting;
+    END;
+$$ LANGUAGE plpgsql;*/
+
 
 CREATE OR REPLACE PROCEDURE book_room(_floor INTEGER, _room INTEGER, _date DATE, _start_hour TIME, 
     _end_hour TIME, _booker_eid INTEGER) 
@@ -185,57 +198,105 @@ AS $$
         room_available INTEGER;
         is_booker INTEGER;
         current_hour TIME := _start_hour;
+        have_fever BOOLEAN;
     BEGIN
-        --this also handles when cap=0, as search room will give rooms with cap>0
-        SELECT COUNT(*) INTO room_available 
-        FROM search_room(1, _date, _start_hour, _end_hour) 
-        WHERE floor = _floor AND room = _room;
+        --Raise notice 'cur time %', CURRENT_TIME;
+        IF (_date = CURRENT_DATE AND _start_hour > CURRENT_TIME) OR _date > CURRENT_DATE THEN
+            --this also handles when cap=0, as search room will give rooms with cap>0
+            SELECT COUNT(*) INTO room_available 
+            FROM search_room(1, _date, _start_hour, _end_hour) 
+            WHERE floor = _floor AND room = _room;
 
-        IF (room_available > 0) THEN
-            SELECT COUNT(*) INTO is_booker
-            FROM Booker NATURAL JOIN Employees
-            WHERE eid = _booker_eid
-            AND resigned_date IS NULL;
-            
-            IF (is_booker) > 0 THEN
-                WHILE current_hour < _end_hour LOOP
-                    INSERT INTO Sessions VALUES (current_hour, _date, _room, _floor, _booker_eid);
-                    INSERT INTO Joins VALUES (_booker_eid, _room, _floor, current_hour, _date);
-                    current_hour := current_hour + INTERVAL '1 hour';
-                END LOOP;
+            IF (room_available > 0) THEN
+                SELECT fever INTO have_fever FROM Health_Declaration WHERE date = CURRENT_DATE AND eid = _booker_eid;
+                IF have_fever IS NULL THEN
+                    RAISE EXCEPTION 'Employees that have not made their health declaration cannot book a room';
+                ELSEIF have_fever = TRUE THEN
+                    RAISE EXCEPTION 'Employees having a fever cannot book a room';
+                END IF;
+
+                SELECT COUNT(*) INTO is_booker
+                FROM Booker NATURAL JOIN Employees
+                WHERE eid = _booker_eid
+                AND resigned_date IS NULL;
+
+                IF (is_booker) > 0 THEN
+                    WHILE current_hour < _end_hour LOOP
+                        INSERT INTO Sessions VALUES (current_hour, _date, _room, _floor, _booker_eid);
+                        INSERT INTO Joins VALUES (_booker_eid, _room, _floor, current_hour, _date);
+                        current_hour := current_hour + INTERVAL '1 hour';
+                    END LOOP;
+                ELSE
+                    RAISE EXCEPTION 'Only a booker can book a meeting room';
+                END IF;
             ELSE
-                RAISE EXCEPTION 'Only a booker can book a meeting room';
+                RAISE EXCEPTION 'Meeting room is unavailable';
             END IF;
         ELSE
-            RAISE EXCEPTION 'Meeting room is unavailable';
+            RAISE EXCEPTION 'Bookings can only be made for future meetings';
         END IF;
     END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE PROCEDURE unbook_room(_floor INTEGER, _room INTEGER, _date DATE, _time TIMESTAMP, 
+CREATE OR REPLACE PROCEDURE unbook_room(_floor INTEGER, _room INTEGER, _date DATE, _start_hour TIME, _end_hour TIME, 
     _booker_eid INTEGER) 
 AS $$
     DECLARE
-        session_deleted INTEGER = NULL;
+        is_booker INTEGER;
+        session_exists INTEGER;
+        current_hour_check TIME := _start_hour;
+        current_hour_remove TIME := _start_hour;
     BEGIN
-        DELETE FROM Sessions s
-        WHERE s.floor = _floor AND
-        s.room = _room AND
-        s.date = _date AND
-        s.time = _time AND
-        s.booker_eid = _booker_eid; -- Ensure only booker can unbook
+        IF _start_hour >= _end_hour THEN
+            RAISE EXCEPTION 'Start hour should be earlier than end hour';
+        END IF;
 
-        SELECT @@rowcount INTO session_deleted;
-        IF session_deleted <= 0 THEN
-            RAISE EXCEPTION 'No meeting found or unauthorised unbooking';
-        END IF; 
-        
-        -- Remove all employees associated with the session
-        DELETE FROM Joins j
-        WHERE j.floor = _floor AND
-        j.room = _room AND
-        j.date = _date AND
-        j.time = _time;
+        WHILE current_hour_check < _end_hour LOOP
+            SELECT COUNT(*) INTO session_exists
+            FROM Sessions s
+            WHERE s.floor = _floor AND
+            s.room = _room AND
+            s.date = _date AND
+            s.time = current_hour_check;
+
+            IF (session_exists) = 0 THEN
+                RAISE EXCEPTION 'Not all sessions in this time range have been booked';
+            END IF;
+
+            SELECT s.booker_eid INTO is_booker
+            FROM Sessions s
+            WHERE s.floor = _floor AND
+            s.room = _room AND
+            s.date = _date AND
+            s.time = current_hour_check AND
+            s.booker_eid = _booker_eid; -- Ensure only booker of the session can unbook
+
+            IF (is_booker) IS NULL THEN
+                RAISE EXCEPTION 'Only the booker of the session can unbook';
+            END IF;
+
+            current_hour_check := current_hour_check + INTERVAL '1 hour';
+        END LOOP;
+
+        WHILE current_hour_remove < _end_hour LOOP
+            -- Remove the session
+            DELETE FROM Sessions s 
+            WHERE s.time = current_hour_remove 
+            AND s.date = _date 
+            AND s.room = _room 
+            AND s.floor = _floor 
+            AND s.booker_eid = _booker_eid;
+
+            -- Remove all employees associated with the session
+            DELETE FROM Joins j
+            WHERE j.floor = _floor AND
+            j.room = _room AND
+            j.date = _date AND
+            j.time = current_hour_remove;
+
+            current_hour_remove := current_hour_remove + INTERVAL '1 hour';
+        END LOOP;
+
     END;
 $$ LANGUAGE plpgsql;
 
@@ -245,6 +306,8 @@ DECLARE
     curr_emp_count INTEGER = NULL;
 BEGIN
     --check if employee is alr added to a diff meeting at same time/date -> Disallow that
+    --dissallow to join past meetings
+    --resign
     IF((SELECT COUNT(*) FROM Sessions WHERE floor = _floor AND room = _room AND date = _date AND time = _time) <> 1) THEN
         RAISE EXCEPTION 'Invalid meeting information entered';
     ELSEIF ((SELECT approver_eid FROM Sessions WHERE floor = _floor AND room = _room AND date = _date AND time = _time) IS NOT NULL) THEN
@@ -290,7 +353,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE PROCEDURE leave_meeting(_floor INTEGER, _room INTEGER, _date DATE, _time TIMESTAMP, 
+CREATE OR REPLACE PROCEDURE leave_meeting(_floor INTEGER, _room INTEGER, _date DATE, _time TIME, 
     _eid INTEGER) 
 AS $$
     DECLARE
@@ -324,6 +387,7 @@ CREATE OR REPLACE PROCEDURE approve_meeting(_floor INTEGER, _room INTEGER, _date
         a_eid INTEGER = NULL;
     BEGIN
         --valid manager_check
+        --prevent past meeting 
         SELECT did INTO room_dept FROM Meeting_Rooms WHERE floor = _floor AND room = _room;
         IF((SELECT resigned_date FROM Employees WHERE eid = _eid) IS NOT NULL) THEN
             RAISE EXCEPTION 'Attempt by resigned employee to approve room';
@@ -415,10 +479,11 @@ RETURNS TABLE (
     BEGIN
         RETURN QUERY
         SELECT DISTINCT j.floor, j.room
-        FROM Joins j
+        FROM Joins j NATURAL JOIN Sessions s
         WHERE j.eid = _eid
         AND j.date <= start_date
-        AND j.date >= start_date - 3; --should this be -3 or -2?
+        AND j.date >= start_date - 3 -- from day D-3 to day D (according to doc)
+        AND s.approver_eid IS NOT NULL; -- ensure meeting has occurred
     END;
 $$ LANGUAGE plpgsql;
 
@@ -587,35 +652,3 @@ RETURNS TABLE (
     END;
 $$ LANGUAGE plpgsql;
 
--- ###########################
---        Trigger Functions
--- ###########################
-
-CREATE OR REPLACE FUNCTION FN_Contact_Numbers_Check_Max() RETURNS TRIGGER AS $$
-    DECLARE
-        contact_numbers INTEGER;
-    BEGIN
-        SELECT COUNT(*) INTO contact_numbers FROM Contact_Numbers WHERE eid = NEW.eid;
-        IF (contact_numbers = 3) THEN 
-            RAISE EXCEPTION 'An employee can have at most 3 contact numbers';
-        END IF;
-
-        RETURN NEW;
-    END;
-$$ LANGUAGE plpgsql;
-
---on deletion of a session, remove all employees attending it (regardless of approval status)
-CREATE OR REPLACE FUNCTION FN_Sessions_OnDelete_RemoveAllEmps() RETURNS TRIGGER AS $$
-    BEGIN
-        DELETE FROM Joins
-        WHERE
-            OLD.time = time
-            AND
-            OLD.date = date
-            AND
-            OLD.room = room
-            AND
-            OLD.floor = floor;
-        RETURN OLD;
-    END;
-$$ LANGUAGE plpgsql;
