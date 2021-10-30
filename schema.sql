@@ -132,6 +132,39 @@ CREATE TABLE Joins (
     FOREIGN KEY (eid) REFERENCES Employees
 ); 
 
+-- ###########################
+--        Trigger Functions
+-- ###########################
+
+CREATE OR REPLACE FUNCTION FN_Contact_Numbers_Check_Max() RETURNS TRIGGER AS $$
+    DECLARE
+        contact_numbers INTEGER;
+    BEGIN
+        SELECT COUNT(*) INTO contact_numbers FROM Contact_Numbers WHERE eid = NEW.eid;
+        IF (contact_numbers = 3) THEN 
+            RAISE EXCEPTION 'An employee can have at most 3 contact numbers';
+        END IF;
+
+        RETURN NEW;
+    END;
+$$ LANGUAGE plpgsql;
+
+--on deletion of a session, remove all employees attending it (regardless of approval status)
+CREATE OR REPLACE FUNCTION FN_Sessions_OnDelete_RemoveAllEmps() RETURNS TRIGGER AS $$
+    BEGIN
+        DELETE FROM Joins
+        WHERE
+            OLD.time = time
+            AND
+            OLD.date = date
+            AND
+            OLD.room = room
+            AND
+            OLD.floor = floor;
+        RETURN OLD;
+    END;
+$$ LANGUAGE plpgsql;
+
 -- ########################################################################
 --       Triggers
 -- naming conv for trigger: TR_<TableName>_<ActionName>
