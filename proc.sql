@@ -10,7 +10,7 @@ CASCADE;
 
 -- Core functions
 DROP FUNCTION IF EXISTS 
-    search_room(INTEGER, DATE, TIME, TIME),
+    search_room(INTEGER, DATE, TIME, TIME)
 CASCADE;
 
 DROP PROCEDURE IF EXISTS 
@@ -408,10 +408,11 @@ RETURNS TABLE (
     BEGIN
         RETURN QUERY
         SELECT DISTINCT j.floor, j.room
-        FROM Joins j
+        FROM Joins j NATURAL JOIN Sessions s
         WHERE j.eid = _eid
         AND j.date <= start_date
-        AND j.date >= start_date - 3; --should this be -3 or -2?
+        AND j.date >= start_date - 3; -- from day D-3 to day D (according to doc)
+        AND s.approver_eid IS NOT NULL; -- ensure meeting has occurred
     END;
 $$ LANGUAGE plpgsql;
 
