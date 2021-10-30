@@ -1,56 +1,71 @@
 -- Basic functions
-DROP FUNCTION IF EXISTS add_department(TEXT), 
-    add_employee(TEXT, TEXT, KIND, INTEGER) CASCADE;
-
-DROP PROCEDURE IF EXISTS add_room(INTEGER, INTEGER, INTEGER, TEXT, INTEGER),
-    change_capacity(INTEGER, INTEGER, INTEGER, DATE, INTEGER),
+DROP PROCEDURE IF EXISTS 
+    add_department(TEXT), 
     remove_department(INTEGER),
-    remove_employee(INTEGER, DATE) CASCADE;
+    add_room(INTEGER, INTEGER, INTEGER, TEXT, INTEGER),
+    change_capacity(INTEGER, INTEGER, INTEGER, DATE, INTEGER),
+    add_employee(TEXT, TEXT, KIND, INTEGER),
+    remove_employee(INTEGER, DATE) 
+CASCADE;
 
 -- Core functions
-DROP FUNCTION IF EXISTS search_room(INTEGER, DATE, TIME, TIME) CASCADE;
+DROP FUNCTION IF EXISTS 
+    search_room(INTEGER, DATE, TIME, TIME),
+    fnStripMinSec(TIME)
+CASCADE;
 
-DROP PROCEDURE IF EXISTS leave_meeting(INTEGER, INTEGER, DATE, TIMESTAMP, INTEGER) CASCADE;
+DROP PROCEDURE IF EXISTS 
+    book_room(INTEGER, INTEGER, DATE, TIME, TIME, INTEGER),
+    unbook_room(INTEGER, INTEGER, DATE, TIMESTAMP, INTEGER),
+    join_meeting(INTEGER, INTEGER, DATE, TIME, INTEGER),
+    leave_meeting(INTEGER, INTEGER, DATE, TIMESTAMP, INTEGER),
+    approve_meeting(INTEGER, INTEGER, DATE, TIME, INTEGER)
+CASCADE;
 
 -- Health functions
-DROP PROCEDURE IF EXISTS declare_health(INTEGER, DATE, FLOAT(1)) CASCADE;
-DROP FUNCTION IF EXISTS three_day_employee_room(INTEGER, DATE),
-    three_day_room_employee(INTEGER, INTEGER, DATE),
-    contact_tracing(INTEGER, DATE) CASCADE;
+DROP PROCEDURE IF EXISTS 
+    declare_health(INTEGER, DATE, FLOAT(1)),
+    remove_employee_from_future_meeting_seven_days(DATE, INTEGER),
+    remove_fever_employee_from_all_meetings(INTEGER)
+CASCADE;
+
+DROP FUNCTION IF EXISTS 
+    contact_tracing(INTEGER, DATE),
+    three_day_employee_room(INTEGER, DATE),
+    three_day_room_employee(INTEGER, INTEGER, DATE)
+CASCADE;
 
 -- Admin functions
-DROP FUNCTION IF EXISTS non_compliance(DATE, DATE),
+DROP FUNCTION IF EXISTS 
+    non_compliance(DATE, DATE),
     view_booking_report(DATE, INTEGER),
-    view_manager_report(DATE,INTEGER) CASCADE;
-
+    view_future_meeting(start_date DATE, INTEGER),
+    view_manager_report(DATE,INTEGER) 
+CASCADE;
 
 -- ###########################
 --        Basic Functions
 -- ###########################
 
-CREATE OR REPLACE FUNCTION add_department(dname TEXT) RETURNS VOID AS $$
+CREATE OR REPLACE PROCEDURE add_department(dname TEXT) AS $$
     BEGIN
         INSERT INTO Departments (dname) VALUES (dname);
     END;
 $$ LANGUAGE plpgsql;
 
-
 CREATE OR REPLACE PROCEDURE remove_department(_did INTEGER) AS $$
     DELETE FROM Departments WHERE did = _did;
 $$ LANGUAGE sql;
 
-
 CREATE OR REPLACE PROCEDURE add_room(did INTEGER, floor INTEGER, room INTEGER, rname TEXT, capacity INTEGER) AS $$
     BEGIN
-        INSERT INTO Meeting_Rooms(did, room, floor, rname) VALUES (did, room, floor, rname);
-        --insert into updates table (non-trigger implementation)
-        INSERT INTO Updates (date,room,floor,new_cap) VALUES (CURRENT_DATE, room, floor, capacity);
-
+        INSERT INTO Meeting_Rooms (did, room, floor, rname) VALUES (did, room, floor, rname);
+        -- insert into updates table (non-trigger implementation)
+        INSERT INTO Updates (date, room, floor, new_cap) VALUES (CURRENT_DATE, room, floor, capacity);
     END
 $$ LANGUAGE plpgsql;
 
-
-CREATE OR REPLACE FUNCTION add_employee(ename TEXT, contact_number TEXT, kind KIND, did INTEGER) RETURNS VOID AS $$
+CREATE OR REPLACE PROCEDURE add_employee(ename TEXT, contact_number TEXT, kind KIND, did INTEGER) AS $$
     DECLARE
         created_eid INTEGER;
         created_email TEXT;
@@ -81,23 +96,21 @@ CREATE OR REPLACE FUNCTION add_employee(ename TEXT, contact_number TEXT, kind KI
     END;
 $$ LANGUAGE plpgsql;
 
-
-CREATE OR REPLACE PROCEDURE remove_employee(eid1 INTEGER, resigned_date1 DATE) AS $$
-    UPDATE Employees SET resigned_date = resigned_date1 WHERE eid = eid1;
-$$ LANGUAGE sql;
-
-
-CREATE OR REPLACE PROCEDURE change_capacity (IN _floor INTEGER, IN _room INTEGER, IN _cap INTEGER, IN _date DATE, IN _eid INTEGER) AS $$
+CREATE OR REPLACE PROCEDURE change_capacity (_floor INTEGER, _room INTEGER, _cap INTEGER, _date DATE, _eid INTEGER) AS $$
     DECLARE
         room_dept INTEGER = NULL;
     BEGIN
-        --get room_dept (did)
+        -- get room_dept (did)
         SELECT did INTO room_dept FROM Meeting_Rooms mr WHERE mr.room = _room AND mr.floor = _floor;
-        --valid manager
+        
+        -- valid manager
         IF (_eid NOT IN (SELECT eid FROM Manager)) THEN
             RAISE EXCEPTION 'Only Managers are allowed to update capacity';
-        ELSEIF (_eid NOT IN (SELECT emps.eid FROM Employees emps, Manager mngs 
-                                WHERE emps.eid = mngs.eid AND emps.did = room_dept)) THEN
+        ELSEIF (_eid NOT IN (
+            SELECT emps.eid 
+            FROM Employees emps, Manager mngs 
+            WHERE emps.eid = mngs.eid AND emps.did = room_dept)
+        ) THEN
             RAISE EXCEPTION 'Ensure Manager is from same department as the room ';
         ELSE
             --add a new entry to updates table, reflecting change in room's capacity
@@ -106,6 +119,9 @@ CREATE OR REPLACE PROCEDURE change_capacity (IN _floor INTEGER, IN _room INTEGER
     END;
 $$ LANGUAGE plpgsql;
 
+CREATE OR REPLACE PROCEDURE remove_employee(eid1 INTEGER, resigned_date1 DATE) AS $$
+    UPDATE Employees SET resigned_date = resigned_date1 WHERE eid = eid1;
+$$ LANGUAGE sql;
 
 -- #############################
 --         Core Functions
@@ -157,8 +173,9 @@ CREATE OR REPLACE FUNCTION fnStripMinSec(_time TIME) RETURNS TIME AS $$
     END
 $$ LANGUAGE plpgsql;
 
-
-CREATE OR REPLACE PROCEDURE book_room(_floor INTEGER, _room INTEGER, _date DATE, _start_hour TIME, _end_hour TIME, _booker_eid INTEGER) AS $$
+CREATE OR REPLACE PROCEDURE book_room(_floor INTEGER, _room INTEGER, _date DATE, _start_hour TIME, 
+    _end_hour TIME, _booker_eid INTEGER) 
+AS $$
     DECLARE
         room_available INTEGER;
         is_booker INTEGER;
@@ -190,9 +207,9 @@ CREATE OR REPLACE PROCEDURE book_room(_floor INTEGER, _room INTEGER, _date DATE,
     END;
 $$ LANGUAGE plpgsql;
 
-
-
-CREATE OR REPLACE PROCEDURE unbook_room(_floor INTEGER, _room INTEGER, _date DATE, _time TIMESTAMP, _booker_eid INTEGER) AS $$
+CREATE OR REPLACE PROCEDURE unbook_room(_floor INTEGER, _room INTEGER, _date DATE, _time TIMESTAMP, 
+    _booker_eid INTEGER) 
+AS $$
     DECLARE
         session_deleted INTEGER = NULL;
     BEGIN
@@ -217,8 +234,60 @@ CREATE OR REPLACE PROCEDURE unbook_room(_floor INTEGER, _room INTEGER, _date DAT
     END;
 $$ LANGUAGE plpgsql;
 
+CREATE OR REPLACE PROCEDURE join_meeting(_floor INTEGER, _room INTEGER, _date DATE, _time TIME, _eid INTEGER) AS $$
+DECLARE
+    max_capacity INTEGER = NULL;
+    curr_emp_count INTEGER = NULL;
+BEGIN
+    --check if employee is alr added to a diff meeting at same time/date -> Disallow that
+    IF((SELECT COUNT(*) FROM Sessions WHERE floor = _floor AND room = _room AND date = _date AND time = _time) <> 1) THEN
+        RAISE EXCEPTION 'Invalid meeting information entered';
+    ELSEIF ((SELECT approver_eid FROM Sessions WHERE floor = _floor AND room = _room AND date = _date AND time = _time) IS NOT NULL) THEN
+        RAISE EXCEPTION 'Employees can only join non-approved meetings';
+    ELSEIF ((SELECT fever FROM Health_Declaration WHERE date = CURRENT_DATE AND eid = _eid) = TRUE) THEN
+        RAISE EXCEPTION 'Employee is having a fever';
+    ELSEIF ((SELECT fever FROM Health_Declaration WHERE date = CURRENT_DATE AND eid = _eid) IS NULL) THEN
+        RAISE EXCEPTION 'Employee has not declared their health today';
+    ELSEIF ((_eid IN (SELECT eid FROM Joins WHERE room = _room AND _floor = floor AND time = _time AND date = _date)) = TRUE) THEN
+        RAISE EXCEPTION 'Employee % already added to Meeting on % % at room: %, floor: % ',_eid,_date, _time, _room, _floor;
+    ELSE
+        --maximum allowable room capacity at time of joining
+        SELECT new_cap INTO max_capacity 
+        FROM updates
+        WHERE 
+            room = _room 
+            AND 
+            floor = _floor
+            AND
+            date <= CURRENT_DATE
+        ORDER BY date DESC
+        LIMIT 1;
+        --count the current employees in booking-to-join
+        SELECT COUNT(*) INTO curr_emp_count
+        FROM Joins j
+        WHERE 
+            j.room = _room
+            AND
+            j.floor = _floor
+            AND
+            j.time = _time
+            AND
+            j.date = _date;
 
-CREATE OR REPLACE PROCEDURE leave_meeting(_floor INTEGER, _room INTEGER, _date DATE, _time TIMESTAMP, _eid INTEGER) AS $$
+        --check whether this joining employee can fit the maximum allowable room capacity
+        IF ((max_capacity - curr_emp_count) >= 1) THEN
+            --add the dude
+            INSERT INTO Joins VALUES (_eid, _room, _floor, _time, _date);
+        ELSE
+            RAISE EXCEPTION 'Meeting on % % at room: %, floor: % is at already at full capacity!', _date, _time, _room, _floor;
+        END IF;
+    END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE PROCEDURE leave_meeting(_floor INTEGER, _room INTEGER, _date DATE, _time TIMESTAMP, 
+    _eid INTEGER) 
+AS $$
     DECLARE
         approver_eid INTEGER = NULL;
     BEGIN
@@ -244,8 +313,7 @@ CREATE OR REPLACE PROCEDURE leave_meeting(_floor INTEGER, _room INTEGER, _date D
     END;
 $$ LANGUAGE plpgsql;
 
-
-CREATE OR REPLACE PROCEDURE  approve_meeting(_floor INTEGER, _room INTEGER, _date DATE, _time TIME, _eid INTEGER) AS $$
+CREATE OR REPLACE PROCEDURE approve_meeting(_floor INTEGER, _room INTEGER, _date DATE, _time TIME, _eid INTEGER) AS $$
     DECLARE
         room_dept INTEGER = NULL;
         a_eid INTEGER = NULL;
@@ -283,58 +351,6 @@ CREATE OR REPLACE PROCEDURE  approve_meeting(_floor INTEGER, _room INTEGER, _dat
         END IF;
     END;
 $$ LANGUAGE plpgsql;
-
-CREATE OR REPLACE PROCEDURE join_meeting(_floor INTEGER, _room INTEGER, _date DATE, _time TIME, _eid INTEGER) AS $$
-DECLARE
-    max_capacity INTEGER = NULL;
-    curr_emp_count INTEGER = NULL;
-BEGIN
-    --check if employee is alr added to a diff meeting at same time/date -> Disallow that
-    IF((SELECT COUNT(*) FROM Sessions WHERE floor = _floor AND room = _room AND date = _date AND time = _time) <> 1) THEN
-        RAISE EXCEPTION 'Invalid meeting information entered';
-    ELSEIF ( (SELECT approver_eid FROM Sessions WHERE floor = _floor AND room = _room AND date = _date AND time = _time) IS NOT NULL) THEN
-        RAISE EXCEPTION 'Employees can only join non-approved meetings';
-    ELSEIF ( (SELECT fever FROM Health_Declaration WHERE date = CURRENT_DATE AND eid = _eid) = TRUE) THEN
-        RAISE EXCEPTION 'Employee is having a fever';
-    ELSEIF ( (SELECT fever FROM Health_Declaration WHERE date = CURRENT_DATE AND eid = _eid) IS NULL) THEN
-        RAISE EXCEPTION 'Employee has not declared their health today';
-    ELSEIF ( (_eid IN (SELECT eid FROM Joins WHERE room = _room AND _floor = floor AND time = _time AND date = _date)) = TRUE) THEN
-        RAISE EXCEPTION 'Employee % already added to Meeting on % % at room: %, floor: % ',_eid,_date, _time, _room, _floor;
-    ELSE
-        --maximum allowable room capacity at time of joining
-        SELECT new_cap INTO max_capacity 
-        FROM updates
-        WHERE 
-            room = _room 
-            AND 
-            floor = _floor
-            AND
-            date <= CURRENT_DATE
-        ORDER BY date DESC
-        LIMIT 1;
-        --count the current employees in booking-to-join
-        SELECT COUNT(*) INTO curr_emp_count
-        FROM Joins j
-        WHERE 
-            j.room = _room
-            AND
-            j.floor = _floor
-            AND
-            j.time = _time
-            AND
-            j.date = _date;
-
-        --check whether this joining employee can fit the maximum allowable room capacity
-        IF ( (max_capacity - curr_emp_count) >= 1) THEN
-            --add the dude
-            INSERT INTO Joins VALUES (_eid, _room, _floor, _time, _date);
-        ELSE
-            RAISE EXCEPTION 'Meeting on % % at room: %, floor: % is at already at full capacity!', _date, _time, _room, _floor;
-        END IF;
-    END IF;
-END;
-$$ LANGUAGE plpgsql;
-
 
 -- #############################
 --        Health Functions
@@ -385,7 +401,6 @@ CREATE OR REPLACE FUNCTION contact_tracing(_eid INTEGER, _date DATE) RETURNS TAB
         RETURN QUERY SELECT DISTINCT eid FROM result ORDER BY eid;
     END;
 $$ LANGUAGE plpgsql;
-
 
 CREATE OR REPLACE FUNCTION three_day_employee_room(_eid INTEGER, start_date DATE)
 RETURNS TABLE (
@@ -510,33 +525,6 @@ RETURNS TABLE (
     END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION view_manager_report(start_date DATE, approver_eid INTEGER) 
-RETURNS TABLE (
-    floor INTEGER, 
-    room INTEGER, 
-    date DATE, 
-    start_hour TIME, 
-    booker_eid INTEGER
-) AS $$
-    DECLARE
-    is_manager INTEGER;
-    manager_did INTEGER;
-    BEGIN
-    SELECT COUNT(*) INTO is_manager FROM Manager WHERE eid = approver_eid;
-    IF (is_manager > 0) THEN
-        SELECT did INTO manager_did FROM Employees WHERE eid = approver_eid;
-
-        RETURN QUERY
-        SELECT s.floor, s.room, s.date, s.time, s.booker_eid
-        FROM Meeting_Rooms mr NATURAL JOIN Sessions s
-        WHERE s.approver_eid IS NULL
-        AND mr.did = manager_did
-        AND s.date >= start_date
-        ORDER BY s.date, s.time ASC;
-    END IF;
-    END;
-$$ LANGUAGE plpgsql;
-
 CREATE OR REPLACE FUNCTION view_future_meeting(start_date DATE, _eid INTEGER)
 RETURNS TABLE (
     floor INTEGER, 
@@ -564,6 +552,33 @@ RETURNS TABLE (
         AND
         s.approver_eid IS NOT NULL
         ORDER BY s.date, s.time ASC;
+    END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION view_manager_report(start_date DATE, approver_eid INTEGER) 
+RETURNS TABLE (
+    floor INTEGER, 
+    room INTEGER, 
+    date DATE, 
+    start_hour TIME, 
+    booker_eid INTEGER
+) AS $$
+    DECLARE
+    is_manager INTEGER;
+    manager_did INTEGER;
+    BEGIN
+    SELECT COUNT(*) INTO is_manager FROM Manager WHERE eid = approver_eid;
+    IF (is_manager > 0) THEN
+        SELECT did INTO manager_did FROM Employees WHERE eid = approver_eid;
+
+        RETURN QUERY
+        SELECT s.floor, s.room, s.date, s.time, s.booker_eid
+        FROM Meeting_Rooms mr NATURAL JOIN Sessions s
+        WHERE s.approver_eid IS NULL
+        AND mr.did = manager_did
+        AND s.date >= start_date
+        ORDER BY s.date, s.time ASC;
+    END IF;
     END;
 $$ LANGUAGE plpgsql;
 
@@ -599,5 +614,3 @@ CREATE OR REPLACE FUNCTION FN_Sessions_OnDelete_RemoveAllEmps() RETURNS TRIGGER 
         RETURN OLD;
     END;
 $$ LANGUAGE plpgsql;
-
-
