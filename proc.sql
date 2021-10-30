@@ -157,10 +157,15 @@ CREATE OR REPLACE FUNCTION search_room(qcapacity INTEGER, qdate DATE, start_hour
         FROM Sessions s INNER JOIN Meeting_Rooms mr 
             ON s.room = mr.room 
             AND s.floor = mr.floor
-            INNER JOIN Updates u
-            ON s.room = u.room
-            AND s.floor = u.floor 
-        WHERE qcapacity <= u.new_cap
+        WHERE qcapacity <= (
+                SELECT new_CAP 
+                FROM Updates u 
+                WHERE u.room = s.room 
+                    AND u.floor = s.floor
+                    AND u.date <= qdate
+                ORDER BY date DESC
+                LIMIT 1
+            )
             AND qdate = s.date
             AND s.time >= stripped_start_hour
             AND s.time < stripped_end_hour;
