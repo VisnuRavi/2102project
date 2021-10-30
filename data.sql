@@ -309,6 +309,7 @@ INSERT INTO Sessions VALUES
 ('10:00:00', CURRENT_DATE + 8, 0, 0, 200,NULL);
 */
 
+
 --join meetings test
 
 --booker already inside for that session
@@ -321,9 +322,6 @@ INSERT INTO Joins VALUES
 (204, 0, 2, '10:00:00', CURRENT_DATE + 7),
 (206, 0, 3, '10:00:00', CURRENT_DATE),
 (206, 0, 3, '10:00:00', CURRENT_DATE + 7);
-
-
-
 
 
 /*
