@@ -172,7 +172,7 @@ CREATE OR REPLACE FUNCTION search_room(qcapacity INTEGER, qdate DATE, start_hour
 $$ LANGUAGE plpgsql;
 
 
-/*CREATE OR REPLACE FUNCTION employee_concurrent_meeting(_eid INTEGER, _date DATE, _start_hour TIME, _end_hour TIME) 
+CREATE OR REPLACE FUNCTION employee_concurrent_meeting(_eid INTEGER, _date DATE, _start_hour TIME, _end_hour TIME) 
 RETURNS BOOLEAN AS $$
     DECLARE
         in_concurrent_meeting BOOLEAN := FALSE;
@@ -180,15 +180,15 @@ RETURNS BOOLEAN AS $$
     BEGIN
         WHILE _start_hour < _end_hour LOOP
             SELECT COUNT(*) INTO count FROM Joins WHERE eid = _eid AND date = _date AND time = _start_hour;
-            IF count = 1 THEN
+            IF count > 0 THEN
                 in_concurrent_meeting := TRUE;
                 EXIT;
             END IF;
-            _start_hour := _start_hour + 1; 
+            _start_hour := _start_hour + INTERVAL '1 hour'; 
         END LOOP;
         RETURN in_concurrent_meeting;
     END;
-$$ LANGUAGE plpgsql;*/
+$$ LANGUAGE plpgsql;
 
 
 CREATE OR REPLACE PROCEDURE book_room(_floor INTEGER, _room INTEGER, _date DATE, _start_hour TIME, 
@@ -199,8 +199,8 @@ AS $$
         is_booker INTEGER;
         current_hour TIME := _start_hour;
         have_fever BOOLEAN;
+        in_concurrent_meeting BOOLEAN;
     BEGIN
-        --Raise notice 'cur time %', CURRENT_TIME;
         IF (_date = CURRENT_DATE AND _start_hour > CURRENT_TIME) OR _date > CURRENT_DATE THEN
             --this also handles when cap=0, as search room will give rooms with cap>0
             SELECT COUNT(*) INTO room_available 
@@ -221,6 +221,12 @@ AS $$
                 AND resigned_date IS NULL;
 
                 IF (is_booker) > 0 THEN
+                    SELECT employee_concurrent_meeting(_booker_eid, _date, _start_hour, _end_hour) INTO in_concurrent_meeting;
+                    --Raise notice 'con %', a;
+                    IF in_concurrent_meeting = TRUE THEN
+                        RAISE EXCEPTION 'Booker is already in a different meeting in the specified date and time';
+                    END IF;
+
                     WHILE current_hour < _end_hour LOOP
                         INSERT INTO Sessions VALUES (current_hour, _date, _room, _floor, _booker_eid);
                         INSERT INTO Joins VALUES (_booker_eid, _room, _floor, current_hour, _date);
