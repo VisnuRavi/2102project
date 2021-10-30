@@ -614,3 +614,45 @@ CREATE OR REPLACE FUNCTION FN_Sessions_OnDelete_RemoveAllEmps() RETURNS TRIGGER 
         RETURN OLD;
     END;
 $$ LANGUAGE plpgsql;
+
+--on adding on a updates entry, check validity of all rooms pertaining to the entry, delete them if invalid
+CREATE OR REPLACE FUNCTION FN_Updates_OnAdd_CheckSessionValidity() RETURNS TRIGGER AS $$
+    BEGIN
+  
+       WITH invalid_sessions AS (
+            SELECT *
+            FROM Sessions s, 
+                (SELECT j.time, j.date, COUNT(*) AS participants
+                FROM Joins j
+                WHERE
+                    NEW.floor = j.floor
+                    AND
+                    NEW.room = j.room
+                    AND
+                    j.date >= NEW.date
+                GROUP BY j.time, j.date) AS p
+            WHERE
+                s.floor = NEW.floor
+                AND
+                s.room = NEW.room
+                AND
+                s.time = p.time
+                AND
+                s.date = p.date
+                AND
+                --check session validity
+                p.participants > NEW.new_cap
+       )
+        DELETE FROM Sessions s2 
+        INNER JOIN invalid_sessions
+        ON
+            s2.time = invalid_sessions.time
+            AND
+            s2.date = invalid_sessions.date
+            AND
+            s2.room = invalid_sessions.room
+            AND
+            s2.floor = invalid_sessions.floor;
+    END;
+$$ LANGUAGE plpgsql;
+
