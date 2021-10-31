@@ -325,7 +325,7 @@ BEGIN
     ELSEIF ((_eid IN (SELECT eid FROM Joins WHERE room = _room AND _floor = floor AND time = _time AND date = _date)) = TRUE) THEN
         RAISE EXCEPTION 'Employee % already added to Meeting on % % at room: %, floor: % ',_eid,_date, _time, _room, _floor;
     ELSE
-        --maximum allowable room capacity at time of joining
+        --maximum allowable room capacity on session's date for relevant room
         SELECT new_cap INTO max_capacity 
         FROM updates
         WHERE 
@@ -333,7 +333,8 @@ BEGIN
             AND 
             floor = _floor
             AND
-            date <= CURRENT_DATE
+            --date <= CURRENT_DATE
+            date <= _date
         ORDER BY date DESC
         LIMIT 1;
         --count the current employees in booking-to-join

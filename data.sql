@@ -238,6 +238,10 @@ INSERT INTO Meeting_Rooms VALUES
 (903, 1, 3, 'smallroom'),
 (904, 0, 4, 'bigroom'),
 (904, 1, 4, 'smallroom');
+/*debugging: #81
+INSERT INTO Meeting_Rooms VALUES
+(904, 1, 11, 'testingroom');
+*/
 
 --capacity added via updates table
 INSERT INTO Updates Values
@@ -251,6 +255,10 @@ INSERT INTO Updates Values
 (CURRENT_DATE, 1, 3, 6),
 (CURRENT_DATE, 0, 4, 6),
 (CURRENT_DATE, 1, 4, 6);
+/*debugging: #81
+INSERT INTO Updates VALUES
+(CURRENT_DATE, 1, 11, 10);
+*/
 
 
 /*
@@ -279,6 +287,11 @@ CALL change_capacity(4, 0, 2, CURRENT_DATE + 7, 308);
 CALL change_capacity(4, 1, 2, CURRENT_DATE + 7, 309);
 */
 
+/*debugging: #81
+CALL change_capacity(11, 1, 2, '2021-11-03', 309);
+CALL change_capacity(11, 1, 3, '2021-11-04', 309);
+*/
+
 
 /*
 --test for capacity change
@@ -299,6 +312,12 @@ INSERT INTO Sessions VALUES
 ('10:00:00', CURRENT_DATE + 7, 0, 2, 204,NULL),
 ('10:00:00', CURRENT_DATE, 0, 3, 206,NULL),
 ('10:00:00', CURRENT_DATE + 7, 0, 3, 206,NULL);
+/*debugging: #81
+INSERT INTO Sessions VALUES
+('10:00:00', CURRENT_DATE, 1, 11, 206,NULL),
+('10:00:00', '2021-11-03', 1, 11, 206,NULL),
+('10:00:00', '2021-11-04', 1, 11, 206,NULL);
+*/
 
 
 /*
@@ -322,7 +341,28 @@ INSERT INTO Joins VALUES
 (204, 0, 2, '10:00:00', CURRENT_DATE + 7),
 (206, 0, 3, '10:00:00', CURRENT_DATE),
 (206, 0, 3, '10:00:00', CURRENT_DATE + 7);
-
+/*debugging: #81
+--booker
+INSERT INTO Joins VALUES
+(206, 1, 11, '10:00:00', CURRENT_DATE),
+(206, 1, 11, '10:00:00', '2021-11-03'),
+(206, 1, 11, '10:00:00', '2021-11-04');
+--session 1: 9 more pax allowed in
+CALL join_meeting(11,1, CURRENT_DATE, '10:00:00', 100);
+CALL join_meeting(11,1, CURRENT_DATE, '10:00:00', 101);
+CALL join_meeting(11,1, CURRENT_DATE, '10:00:00', 102);
+CALL join_meeting(11,1, CURRENT_DATE, '10:00:00', 103);
+CALL join_meeting(11,1, CURRENT_DATE, '10:00:00', 104);
+CALL join_meeting(11,1, CURRENT_DATE, '10:00:00', 105);
+CALL join_meeting(11,1, CURRENT_DATE, '10:00:00', 106);
+CALL join_meeting(11,1, CURRENT_DATE, '10:00:00', 107);
+CALL join_meeting(11,1, CURRENT_DATE, '10:00:00', 108);
+--session 2: 1 more pax allowed in
+CALL join_meeting(11,1,'2021-11-03' , '10:00:00', 100);
+--session 3: 2 more pax allowed in
+CALL join_meeting(11,1,'2021-11-04' , '10:00:00', 100);
+CALL join_meeting(11,1,'2021-11-04' , '10:00:00', 101);
+*/
 
 /*
 --test booker (should throw error)
