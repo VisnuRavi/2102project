@@ -35,13 +35,12 @@ CREATE TABLE Employees (
 CREATE TABLE Health_Declaration (
     date DATE,
     eid INTEGER,
-    temp FLOAT(1),
+    temp FLOAT(1) CHECK (temp >= 34 AND temp <= 43),
     fever BOOLEAN GENERATED ALWAYS AS (temp > 37.5) STORED, --derived attribute
     PRIMARY KEY (date, eid),
     FOREIGN KEY (eid) REFERENCES Employees
 );
 
--- Todo: limit to 3 per employee
 CREATE TABLE Contact_Numbers (
     eid INTEGER,
     contact_number TEXT,
