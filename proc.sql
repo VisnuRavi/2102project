@@ -569,13 +569,17 @@ CREATE OR REPLACE FUNCTION non_compliance(start_date DATE, end_date DATE) RETURN
     number_of_days INTEGER
 ) AS $$
     BEGIN
+        IF (start_date > end_date) THEN 
+            RAISE EXCEPTION 'Start date must be before end date';
+        END IF;
+
         RETURN QUERY
-        SELECT hd.eid, CAST(CAST(end_date AS DATE) - CAST(start_date AS DATE) + 1 - COUNT(*) AS INTEGER)
+        SELECT hd.eid, CAST((end_date - start_date + 1) - COUNT(*) AS INTEGER)
         FROM Health_Declaration hd
         WHERE hd.date >= start_date AND hd.date <= end_date
         GROUP BY hd.eid
-        HAVING CAST(CAST(end_date AS DATE) - CAST(start_date AS DATE) + 1 - COUNT(*) AS INTEGER) > 0
-        ORDER BY CAST(CAST(end_date AS DATE) - CAST(start_date AS DATE) + 1 - COUNT(*) AS INTEGER) DESC, hd.eid;
+        HAVING CAST((end_date - start_date + 1) - COUNT(*) AS INTEGER) > 0
+        ORDER BY CAST((end_date - start_date + 1) - COUNT(*) AS INTEGER) DESC, hd.eid;
     END;
 $$ LANGUAGE plpgsql;
 
