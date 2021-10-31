@@ -75,7 +75,7 @@ CREATE OR REPLACE PROCEDURE add_employee(ename TEXT, contact_number TEXT, kind K
         RETURNING eid INTO created_eid;
 
         -- Create and set email by concatenating name and eid (guaranteed to be unique)
-        created_email = CONCAT(ename, created_eid::TEXT, '@company.com');
+        created_email = CONCAT(created_eid::TEXT, '@company.com');
         UPDATE Employees SET email = created_email WHERE eid = created_eid;
 
         -- Insert contact number into separate table (since an employee can have multiple)
@@ -433,6 +433,9 @@ $$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE PROCEDURE declare_health(_eid INTEGER, _date DATE, _temperature FLOAT(1)) AS $$
     BEGIN
+        IF (SELECT resigned_date FROM Employees WHERE eid = _eid) IS NOT NULL THEN
+            RAISE EXCEPTION 'Employee has resigned';
+        END IF;
         INSERT INTO Health_Declaration values (_date, _eid, _temperature);
     END;
 $$ LANGUAGE plpgsql;
@@ -657,4 +660,3 @@ RETURNS TABLE (
     END IF;
     END;
 $$ LANGUAGE plpgsql;
-
