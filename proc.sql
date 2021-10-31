@@ -320,8 +320,6 @@ BEGIN
         RAISE EXCEPTION 'Employees can only join non-approved meetings';
     ELSEIF ((SELECT fever FROM Health_Declaration WHERE date = CURRENT_DATE AND eid = _eid) = TRUE) THEN
         RAISE EXCEPTION 'Employee is having a fever';
-    ELSEIF ((SELECT fever FROM Health_Declaration WHERE date = CURRENT_DATE AND eid = _eid) IS NULL) THEN
-        RAISE EXCEPTION 'Employee has not declared their health today';
     ELSEIF ((_eid IN (SELECT eid FROM Joins WHERE room = _room AND _floor = floor AND time = _time AND date = _date)) = TRUE) THEN
         RAISE EXCEPTION 'Employee % already added to Meeting on % % at room: %, floor: % ',_eid,_date, _time, _room, _floor;
     ELSE
