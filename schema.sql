@@ -180,7 +180,7 @@ CREATE OR REPLACE FUNCTION FN_Updates_OnAdd_CheckSessionValidity() RETURNS TRIGG
                     AND
                     NEW.room = j.room
                     AND
-                    j.date >= NEW.date
+                    j.date > NEW.date
                 GROUP BY j.time, j.date) AS p
             WHERE
                 s.floor = NEW.floor

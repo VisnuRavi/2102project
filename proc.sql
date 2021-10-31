@@ -110,7 +110,13 @@ CREATE OR REPLACE PROCEDURE change_capacity (_floor INTEGER, _room INTEGER, _cap
             FROM Employees emps, Manager mngs 
             WHERE emps.eid = mngs.eid AND emps.did = room_dept)
         ) THEN
-            RAISE EXCEPTION 'Ensure Manager is from same department as the room ';
+            RAISE EXCEPTION 'Ensure Manager is from same department as the room';
+        ELSEIF ((SELECT resigned_date 
+                FROM Employees 
+                WHERE eid = _eid) IS NOT NULL
+        ) THEN
+            RAISE EXCEPTION 'Attempt by resigned employee to change capacity!';
+            
         ELSE
             --add a new entry to updates table, reflecting change in room's capacity
             INSERT INTO Updates (date,room,floor,new_cap) VALUES (_date, _room, _floor, _cap);
@@ -320,10 +326,12 @@ BEGIN
         RAISE EXCEPTION 'Employees can only join non-approved meetings';
     ELSEIF ((SELECT fever FROM Health_Declaration WHERE date = CURRENT_DATE AND eid = _eid) = TRUE) THEN
         RAISE EXCEPTION 'Employee is having a fever';
-    ELSEIF ((SELECT fever FROM Health_Declaration WHERE date = CURRENT_DATE AND eid = _eid) IS NULL) THEN
-        RAISE EXCEPTION 'Employee has not declared their health today';
     ELSEIF ((_eid IN (SELECT eid FROM Joins WHERE room = _room AND _floor = floor AND time = _time AND date = _date)) = TRUE) THEN
         RAISE EXCEPTION 'Employee % already added to Meeting on % % at room: %, floor: % ',_eid,_date, _time, _room, _floor;
+    ELSEIF ((SELECT resigned_date FROM Employees WHERE eid = _eid) IS NOT NULL) THEN
+        RAISE EXCEPTION 'Attempt by resigned employee to join meeting!';
+    ELSEIF ((SELECT employee_concurrent_meeting(_eid, _date, _time, _time + INTERVAL '1 hour')) = TRUE) THEN
+        RAISE EXCEPTION 'Employee already in a different meeting in the specified date and time';
     ELSE
         --maximum allowable room capacity on session's date for relevant room
         SELECT new_cap INTO max_capacity 
