@@ -53,6 +53,49 @@ INSERT INTO Employees VALUES
 (308, 'name_m_308', 'name_m_308@mail.com', 904, NULL),
 (309, 'name_m_309', 'name_m_309@mail.com', 904, NULL);
 
+/*
+debugging: #83 #80 #68
+INSERT INTO Employees VALUES
+(100, 'name_j_100', 'name_j_100@mail.com', 900, NULL),
+(101, 'name_j_101', 'name_j_101@mail.com', 900, NULL),
+(200, 'name_s_200', 'name_s_200@mail.com', 900, NULL),
+(201, 'name_s_201', 'name_s_201@mail.com', 900, NULL),
+(300, 'name_m_300', 'name_m_300@mail.com', 900, NULL),
+(301, 'name_m_301', 'name_m_301@mail.com', 900, CURRENT_DATE),
+
+(102, 'name_j_102', 'name_j_102@mail.com', 901, NULL),
+(103, 'name_j_103', 'name_j_103@mail.com', 901, NULL),
+(202, 'name_s_202', 'name_s_202@mail.com', 901, NULL),
+(203, 'name_s_203', 'name_s_203@mail.com', 901, NULL),
+(302, 'name_m_302', 'name_m_302@mail.com', 901, NULL),
+(303, 'name_m_303', 'name_m_303@mail.com', 901, CURRENT_DATE),
+
+(104, 'name_j_104', 'name_j_104@mail.com', 902, NULL),
+(105, 'name_j_105', 'name_j_105@mail.com', 902, NULL),
+(204, 'name_s_204', 'name_s_204@mail.com', 902, NULL),
+(205, 'name_s_205', 'name_s_205@mail.com', 902, NULL),
+(304, 'name_m_304', 'name_m_304@mail.com', 902, NULL),
+(305, 'name_m_305', 'name_m_305@mail.com', 902, CURRENT_DATE),
+
+(106, 'name_j_106', 'name_j_106@mail.com', 903, NULL),
+(107, 'name_j_107', 'name_j_107@mail.com', 903, NULL),
+(206, 'name_s_206', 'name_s_206@mail.com', 903, NULL),
+(207, 'name_s_207', 'name_s_207@mail.com', 903, NULL),
+(306, 'name_m_306', 'name_m_306@mail.com', 903, NULL),
+(307, 'name_m_307', 'name_m_307@mail.com', 903, CURRENT_DATE),
+
+(108, 'name_j_108', 'name_j_108@mail.com', 904, NULL),
+(109, 'name_j_109', 'name_j_109@mail.com', 904, NULL),
+(208, 'name_s_208', 'name_s_208@mail.com', 904, NULL),
+(209, 'name_s_209', 'name_s_209@mail.com', 904, NULL),
+(308, 'name_m_308', 'name_m_308@mail.com', 904, NULL),
+(309, 'name_m_309', 'name_m_309@mail.com', 904, CURRENT_DATE);
+
+*/
+
+
+
+
 --Health declaration
 INSERT INTO Health_Declaration (date, eid, temp) VALUES
 --date: CURRENT_DATE
@@ -89,6 +132,35 @@ INSERT INTO Health_Declaration (date, eid, temp) VALUES
 (CURRENT_DATE,209, 37.5),
 (CURRENT_DATE,308, 37.5),
 (CURRENT_DATE,309, 37.5);
+
+/*debugging: #83 #80 #68
+INSERT INTO Health_Declaration (date, eid, temp) VALUES
+(CURRENT_DATE,100, 37.6),
+(CURRENT_DATE,200, 37.5),
+(CURRENT_DATE,201, 37.5),
+(CURRENT_DATE,300, 37.5),
+(CURRENT_DATE,301, 37.5),
+(CURRENT_DATE,102, 37.6),
+(CURRENT_DATE,202, 37.5),
+(CURRENT_DATE,203, 37.5),
+(CURRENT_DATE,302, 37.5),
+(CURRENT_DATE,303, 37.5),
+(CURRENT_DATE,104, 37.6),
+(CURRENT_DATE,204, 37.5),
+(CURRENT_DATE,205, 37.5),
+(CURRENT_DATE,304, 37.5),
+(CURRENT_DATE,305, 37.5),
+(CURRENT_DATE,106, 37.6),
+(CURRENT_DATE,206, 37.5),
+(CURRENT_DATE,207, 37.5),
+(CURRENT_DATE,306, 37.5),
+(CURRENT_DATE,307, 37.5),
+(CURRENT_DATE,108, 37.6),
+(CURRENT_DATE,208, 37.5),
+(CURRENT_DATE,209, 37.5),
+(CURRENT_DATE,308, 37.5),
+(CURRENT_DATE,309, 37.5);
+*/
 
 /*
 ('2000-12-31',100, 37.5),
@@ -290,6 +362,11 @@ CALL change_capacity(4, 1, 2, CURRENT_DATE + 7, 309);
 /*debugging: #81
 CALL change_capacity(11, 1, 2, '2021-11-03', 309);
 CALL change_capacity(11, 1, 3, '2021-11-04', 309);
+*/
+
+/*
+debugging: #83 #80 #68
+CALL change_capacity(0, 0, 2, '2021-11-03', 301);
 */
 
 
