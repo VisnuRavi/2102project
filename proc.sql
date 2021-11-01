@@ -445,7 +445,12 @@ CREATE OR REPLACE PROCEDURE declare_health(_eid INTEGER, _date DATE, _temperatur
         IF (SELECT resigned_date FROM Employees WHERE eid = _eid) IS NOT NULL THEN
             RAISE EXCEPTION 'Employee has resigned';
         END IF;
-        INSERT INTO Health_Declaration values (_date, _eid, _temperature);
+
+        IF (SELECT eid FROM Health_Declaration WHERE date = _date AND eid = _eid) IS NOT NULL THEN
+            UPDATE Health_Declaration SET temp = _temperature WHERE date = _date AND eid = _eid;
+        ELSE 
+            INSERT INTO Health_Declaration values (_date, _eid, _temperature);
+        END IF;
     END;
 $$ LANGUAGE plpgsql;
 
