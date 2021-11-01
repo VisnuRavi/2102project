@@ -45,7 +45,7 @@ CREATE TABLE Contact_Numbers (
     eid INTEGER,
     contact_number TEXT,
     
-    PRIMARY KEY (eid, contact_number),
+    PRIMARY KEY (contact_number),
     FOREIGN KEY (eid) REFERENCES Employees
 );  
 
