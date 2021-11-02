@@ -75,7 +75,7 @@ CREATE OR REPLACE PROCEDURE add_employee(ename TEXT, contact_number TEXT, kind K
         RETURNING eid INTO created_eid;
 
         -- Create and set email by concatenating name and eid (guaranteed to be unique)
-        created_email = CONCAT(ename, created_eid::TEXT, '@company.com');
+        created_email = CONCAT(created_eid::TEXT, '@company.com');
         UPDATE Employees SET email = created_email WHERE eid = created_eid;
 
         -- Insert contact number into separate table (since an employee can have multiple)
@@ -110,7 +110,13 @@ CREATE OR REPLACE PROCEDURE change_capacity (_floor INTEGER, _room INTEGER, _cap
             FROM Employees emps, Manager mngs 
             WHERE emps.eid = mngs.eid AND emps.did = room_dept)
         ) THEN
-            RAISE EXCEPTION 'Ensure Manager is from same department as the room ';
+            RAISE EXCEPTION 'Ensure Manager is from same department as the room';
+        ELSEIF ((SELECT resigned_date 
+                FROM Employees 
+                WHERE eid = _eid) IS NOT NULL
+        ) THEN
+            RAISE EXCEPTION 'Attempt by resigned employee to change capacity!';
+            
         ELSE
             --add a new entry to updates table, reflecting change in room's capacity
             INSERT INTO Updates (date,room,floor,new_cap) VALUES (_date, _room, _floor, _cap);
@@ -172,7 +178,7 @@ CREATE OR REPLACE FUNCTION search_room(qcapacity INTEGER, qdate DATE, start_hour
 $$ LANGUAGE plpgsql;
 
 
-/*CREATE OR REPLACE FUNCTION employee_concurrent_meeting(_eid INTEGER, _date DATE, _start_hour TIME, _end_hour TIME) 
+CREATE OR REPLACE FUNCTION employee_concurrent_meeting(_eid INTEGER, _date DATE, _start_hour TIME, _end_hour TIME) 
 RETURNS BOOLEAN AS $$
     DECLARE
         in_concurrent_meeting BOOLEAN := FALSE;
@@ -180,15 +186,15 @@ RETURNS BOOLEAN AS $$
     BEGIN
         WHILE _start_hour < _end_hour LOOP
             SELECT COUNT(*) INTO count FROM Joins WHERE eid = _eid AND date = _date AND time = _start_hour;
-            IF count = 1 THEN
+            IF count > 0 THEN
                 in_concurrent_meeting := TRUE;
                 EXIT;
             END IF;
-            _start_hour := _start_hour + 1; 
+            _start_hour := _start_hour + INTERVAL '1 hour'; 
         END LOOP;
         RETURN in_concurrent_meeting;
     END;
-$$ LANGUAGE plpgsql;*/
+$$ LANGUAGE plpgsql;
 
 
 CREATE OR REPLACE PROCEDURE book_room(_floor INTEGER, _room INTEGER, _date DATE, _start_hour TIME, 
@@ -199,8 +205,8 @@ AS $$
         is_booker INTEGER;
         current_hour TIME := _start_hour;
         have_fever BOOLEAN;
+        in_concurrent_meeting BOOLEAN;
     BEGIN
-        --Raise notice 'cur time %', CURRENT_TIME;
         IF (_date = CURRENT_DATE AND _start_hour > CURRENT_TIME) OR _date > CURRENT_DATE THEN
             --this also handles when cap=0, as search room will give rooms with cap>0
             SELECT COUNT(*) INTO room_available 
@@ -221,6 +227,12 @@ AS $$
                 AND resigned_date IS NULL;
 
                 IF (is_booker) > 0 THEN
+                    SELECT employee_concurrent_meeting(_booker_eid, _date, _start_hour, _end_hour) INTO in_concurrent_meeting;
+                    --Raise notice 'con %', a;
+                    IF in_concurrent_meeting = TRUE THEN
+                        RAISE EXCEPTION 'Booker is already in a different meeting in the specified date and time';
+                    END IF;
+
                     WHILE current_hour < _end_hour LOOP
                         INSERT INTO Sessions VALUES (current_hour, _date, _room, _floor, _booker_eid);
                         INSERT INTO Joins VALUES (_booker_eid, _room, _floor, current_hour, _date);
@@ -314,12 +326,14 @@ BEGIN
         RAISE EXCEPTION 'Employees can only join non-approved meetings';
     ELSEIF ((SELECT fever FROM Health_Declaration WHERE date = CURRENT_DATE AND eid = _eid) = TRUE) THEN
         RAISE EXCEPTION 'Employee is having a fever';
-    ELSEIF ((SELECT fever FROM Health_Declaration WHERE date = CURRENT_DATE AND eid = _eid) IS NULL) THEN
-        RAISE EXCEPTION 'Employee has not declared their health today';
     ELSEIF ((_eid IN (SELECT eid FROM Joins WHERE room = _room AND _floor = floor AND time = _time AND date = _date)) = TRUE) THEN
         RAISE EXCEPTION 'Employee % already added to Meeting on % % at room: %, floor: % ',_eid,_date, _time, _room, _floor;
+    ELSEIF ((SELECT resigned_date FROM Employees WHERE eid = _eid) IS NOT NULL) THEN
+        RAISE EXCEPTION 'Attempt by resigned employee to join meeting!';
+    ELSEIF ((SELECT employee_concurrent_meeting(_eid, _date, _time, _time + INTERVAL '1 hour')) = TRUE) THEN
+        RAISE EXCEPTION 'Employee already in a different meeting in the specified date and time';
     ELSE
-        --maximum allowable room capacity at time of joining
+        --maximum allowable room capacity on session's date for relevant room
         SELECT new_cap INTO max_capacity 
         FROM updates
         WHERE 
@@ -327,7 +341,8 @@ BEGIN
             AND 
             floor = _floor
             AND
-            date <= CURRENT_DATE
+            --date <= CURRENT_DATE
+            date <= _date
         ORDER BY date DESC
         LIMIT 1;
         --count the current employees in booking-to-join
@@ -427,7 +442,15 @@ $$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE PROCEDURE declare_health(_eid INTEGER, _date DATE, _temperature FLOAT(1)) AS $$
     BEGIN
-        INSERT INTO Health_Declaration values (_date, _eid, _temperature);
+        IF (SELECT resigned_date FROM Employees WHERE eid = _eid) IS NOT NULL THEN
+            RAISE EXCEPTION 'Employee has resigned';
+        END IF;
+
+        IF (SELECT eid FROM Health_Declaration WHERE date = _date AND eid = _eid) IS NOT NULL THEN
+            UPDATE Health_Declaration SET temp = _temperature WHERE date = _date AND eid = _eid;
+        ELSE 
+            INSERT INTO Health_Declaration values (_date, _eid, _temperature);
+        END IF;
     END;
 $$ LANGUAGE plpgsql;
 
@@ -560,13 +583,17 @@ CREATE OR REPLACE FUNCTION non_compliance(start_date DATE, end_date DATE) RETURN
     number_of_days INTEGER
 ) AS $$
     BEGIN
+        IF (start_date > end_date) THEN 
+            RAISE EXCEPTION 'Start date must be before end date';
+        END IF;
+
         RETURN QUERY
-        SELECT hd.eid, CAST(CAST(end_date AS DATE) - CAST(start_date AS DATE) + 1 - COUNT(*) AS INTEGER)
+        SELECT hd.eid, CAST((end_date - start_date + 1) - COUNT(*) AS INTEGER)
         FROM Health_Declaration hd
         WHERE hd.date >= start_date AND hd.date <= end_date
         GROUP BY hd.eid
-        HAVING CAST(CAST(end_date AS DATE) - CAST(start_date AS DATE) + 1 - COUNT(*) AS INTEGER) > 0
-        ORDER BY CAST(CAST(end_date AS DATE) - CAST(start_date AS DATE) + 1 - COUNT(*) AS INTEGER) DESC, hd.eid;
+        HAVING CAST((end_date - start_date + 1) - COUNT(*) AS INTEGER) > 0
+        ORDER BY CAST((end_date - start_date + 1) - COUNT(*) AS INTEGER) DESC, hd.eid;
     END;
 $$ LANGUAGE plpgsql;
 
@@ -651,4 +678,3 @@ RETURNS TABLE (
     END IF;
     END;
 $$ LANGUAGE plpgsql;
-

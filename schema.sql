@@ -35,18 +35,17 @@ CREATE TABLE Employees (
 CREATE TABLE Health_Declaration (
     date DATE,
     eid INTEGER,
-    temp FLOAT(1),
+    temp FLOAT(1) CHECK (temp >= 34 AND temp <= 43),
     fever BOOLEAN GENERATED ALWAYS AS (temp > 37.5) STORED, --derived attribute
     PRIMARY KEY (date, eid),
     FOREIGN KEY (eid) REFERENCES Employees
 );
 
--- Todo: limit to 3 per employee
 CREATE TABLE Contact_Numbers (
     eid INTEGER,
     contact_number TEXT,
     
-    PRIMARY KEY (eid, contact_number),
+    PRIMARY KEY (contact_number),
     FOREIGN KEY (eid) REFERENCES Employees
 );  
 
@@ -143,7 +142,7 @@ CREATE OR REPLACE FUNCTION FN_Contact_Numbers_Check_Max() RETURNS TRIGGER AS $$
     BEGIN
         SELECT COUNT(*) INTO contact_numbers FROM Contact_Numbers WHERE eid = NEW.eid;
         IF (contact_numbers = 3) THEN 
-            RAISE EXCEPTION 'An employee can have at most 3 contact numbers';
+            RAISE NOTICE 'employee: % can have at most 3 contact numbers', NEW.eid;
         END IF;
 
         RETURN NEW;
@@ -181,7 +180,7 @@ CREATE OR REPLACE FUNCTION FN_Updates_OnAdd_CheckSessionValidity() RETURNS TRIGG
                     AND
                     NEW.room = j.room
                     AND
-                    j.date >= NEW.date
+                    j.date > NEW.date
                 GROUP BY j.time, j.date) AS p
             WHERE
                 s.floor = NEW.floor
