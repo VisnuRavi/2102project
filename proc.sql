@@ -209,9 +209,7 @@ AS $$
 
             IF (room_available > 0) THEN
                 SELECT fever INTO have_fever FROM Health_Declaration WHERE date = CURRENT_DATE AND eid = _booker_eid;
-                IF have_fever IS NULL THEN
-                    RAISE EXCEPTION 'Employees that have not made their health declaration cannot book a room';
-                ELSEIF have_fever = TRUE THEN
+                IF have_fever = TRUE THEN
                     RAISE EXCEPTION 'Employees having a fever cannot book a room';
                 END IF;
 
