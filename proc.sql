@@ -46,12 +46,14 @@ CASCADE;
 DROP TRIGGER IF EXISTS TR_Contact_Numbers_Check_Max ON Contact_Numbers;
 DROP TRIGGER IF EXISTS TR_Sessions_OnDelete_RemoveAllEmps ON Sessions;
 DROP TRIGGER IF EXISTS TR_Updates_OnAdd_CheckSessionValidity ON Updates;
+DROP TRIGGER IF EXISTS TR_Departments_BeforeDelete_Check ON Departments;
 
 -- Trigger Functions
 DROP FUNCTION IF EXISTS
     FN_Contact_Numbers_Check_Max(),
     FN_Sessions_OnDelete_RemoveAllEmps(),
-    FN_Updates_OnAdd_CheckSessionValidity();
+    FN_Updates_OnAdd_CheckSessionValidity(),
+    FN_Departments_BeforeDelete_Check();
 
 -- ###########################
 --        Basic Functions
@@ -64,8 +66,10 @@ CREATE OR REPLACE PROCEDURE add_department(dname TEXT) AS $$
 $$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE PROCEDURE remove_department(_did INTEGER) AS $$
+    BEGIN
     DELETE FROM Departments WHERE did = _did;
-$$ LANGUAGE sql;
+    END
+$$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE PROCEDURE add_room(did INTEGER, floor INTEGER, room INTEGER, rname TEXT, capacity INTEGER) AS $$
     BEGIN
@@ -86,7 +90,7 @@ CREATE OR REPLACE PROCEDURE add_employee(ename TEXT, contact_number TEXT, kind K
         RETURNING eid INTO created_eid;
 
         -- Create and set email by concatenating name and eid (guaranteed to be unique)
-        created_email = CONCAT(ename, created_eid::TEXT, '@company.com');
+        created_email = CONCAT(created_eid::TEXT, '@company.com');
         UPDATE Employees SET email = created_email WHERE eid = created_eid;
 
         -- Insert contact number into separate table (since an employee can have multiple)
@@ -121,7 +125,13 @@ CREATE OR REPLACE PROCEDURE change_capacity (_floor INTEGER, _room INTEGER, _cap
             FROM Employees emps, Manager mngs 
             WHERE emps.eid = mngs.eid AND emps.did = room_dept)
         ) THEN
-            RAISE EXCEPTION 'Ensure Manager is from same department as the room ';
+            RAISE EXCEPTION 'Ensure Manager is from same department as the room';
+        ELSEIF ((SELECT resigned_date 
+                FROM Employees 
+                WHERE eid = _eid) IS NOT NULL
+        ) THEN
+            RAISE EXCEPTION 'Attempt by resigned employee to change capacity!';
+            
         ELSE
             --add a new entry to updates table, reflecting change in room's capacity
             INSERT INTO Updates (date,room,floor,new_cap) VALUES (_date, _room, _floor, _cap);
@@ -330,12 +340,14 @@ BEGIN
         RAISE EXCEPTION 'Employees can only join non-approved meetings';
     ELSEIF ((SELECT fever FROM Health_Declaration WHERE date = CURRENT_DATE AND eid = _eid) = TRUE) THEN
         RAISE EXCEPTION 'Employee is having a fever';
-    ELSEIF ((SELECT fever FROM Health_Declaration WHERE date = CURRENT_DATE AND eid = _eid) IS NULL) THEN
-        RAISE EXCEPTION 'Employee has not declared their health today';
     ELSEIF ((_eid IN (SELECT eid FROM Joins WHERE room = _room AND _floor = floor AND time = _time AND date = _date)) = TRUE) THEN
         RAISE EXCEPTION 'Employee % already added to Meeting on % % at room: %, floor: % ',_eid,_date, _time, _room, _floor;
+    ELSEIF ((SELECT resigned_date FROM Employees WHERE eid = _eid) IS NOT NULL) THEN
+        RAISE EXCEPTION 'Attempt by resigned employee to join meeting!';
+    ELSEIF ((SELECT employee_concurrent_meeting(_eid, _date, _time, _time + INTERVAL '1 hour')) = TRUE) THEN
+        RAISE EXCEPTION 'Employee already in a different meeting in the specified date and time';
     ELSE
-        --maximum allowable room capacity at time of joining
+        --maximum allowable room capacity on session's date for relevant room
         SELECT new_cap INTO max_capacity 
         FROM updates
         WHERE 
@@ -343,7 +355,8 @@ BEGIN
             AND 
             floor = _floor
             AND
-            date <= CURRENT_DATE
+            --date <= CURRENT_DATE
+            date <= _date
         ORDER BY date DESC
         LIMIT 1;
         --count the current employees in booking-to-join
@@ -443,7 +456,15 @@ $$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE PROCEDURE declare_health(_eid INTEGER, _date DATE, _temperature FLOAT(1)) AS $$
     BEGIN
-        INSERT INTO Health_Declaration values (_date, _eid, _temperature);
+        IF (SELECT resigned_date FROM Employees WHERE eid = _eid) IS NOT NULL THEN
+            RAISE EXCEPTION 'Employee has resigned';
+        END IF;
+
+        IF (SELECT eid FROM Health_Declaration WHERE date = _date AND eid = _eid) IS NOT NULL THEN
+            UPDATE Health_Declaration SET temp = _temperature WHERE date = _date AND eid = _eid;
+        ELSE 
+            INSERT INTO Health_Declaration values (_date, _eid, _temperature);
+        END IF;
     END;
 $$ LANGUAGE plpgsql;
 
@@ -576,13 +597,17 @@ CREATE OR REPLACE FUNCTION non_compliance(start_date DATE, end_date DATE) RETURN
     number_of_days INTEGER
 ) AS $$
     BEGIN
+        IF (start_date > end_date) THEN 
+            RAISE EXCEPTION 'Start date must be before end date';
+        END IF;
+
         RETURN QUERY
-        SELECT hd.eid, CAST(CAST(end_date AS DATE) - CAST(start_date AS DATE) + 1 - COUNT(*) AS INTEGER)
+        SELECT hd.eid, CAST((end_date - start_date + 1) - COUNT(*) AS INTEGER)
         FROM Health_Declaration hd
         WHERE hd.date >= start_date AND hd.date <= end_date
         GROUP BY hd.eid
-        HAVING CAST(CAST(end_date AS DATE) - CAST(start_date AS DATE) + 1 - COUNT(*) AS INTEGER) > 0
-        ORDER BY CAST(CAST(end_date AS DATE) - CAST(start_date AS DATE) + 1 - COUNT(*) AS INTEGER) DESC, hd.eid;
+        HAVING CAST((end_date - start_date + 1) - COUNT(*) AS INTEGER) > 0
+        ORDER BY CAST((end_date - start_date + 1) - COUNT(*) AS INTEGER) DESC, hd.eid;
     END;
 $$ LANGUAGE plpgsql;
 
@@ -669,7 +694,6 @@ RETURNS TABLE (
 $$ LANGUAGE plpgsql;
 
 
-
 -- ###########################
 --        Trigger Functions
 -- ###########################
@@ -746,6 +770,30 @@ CREATE OR REPLACE FUNCTION FN_Updates_OnAdd_CheckSessionValidity() RETURNS TRIGG
     END;
 $$ LANGUAGE plpgsql;
 
+CREATE OR REPLACE FUNCTION FN_Departments_BeforeDelete_Check() RETURNS TRIGGER AS $$
+    DECLARE
+        has_employees INTEGER;
+        has_meeting_rooms INTEGER;
+    BEGIN
+    SELECT COUNT(*) INTO has_employees
+    FROM Employees e
+    WHERE e.did = OLD.did;
+    IF has_employees > 0 THEN
+        RAISE NOTICE 'There are still employees in this department that have yet to be transferred or removed';
+        RETURN NULL;
+    END IF;
+
+    SELECT COUNT(*) INTO has_meeting_rooms
+    FROM Meeting_Rooms mr
+    WHERE mr.did = OLD.did;
+    IF has_meeting_rooms > 0 THEN
+        RAISE NOTICE 'There are still meeting rooms associated with this department';
+        RETURN NULL;
+    END IF;
+    END;
+$$ LANGUAGE plpgsql;
+
+
 -- ########################################################################
 --       Triggers
 -- naming conv for trigger: TR_<TableName>_<ActionName>
@@ -763,3 +811,7 @@ FOR EACH ROW EXECUTE FUNCTION FN_Sessions_OnDelete_RemoveAllEmps();
 CREATE TRIGGER TR_Updates_OnAdd_CheckSessionValidity
 AFTER INSERT ON Updates
 FOR EACH ROW EXECUTE FUNCTION FN_Updates_OnAdd_CheckSessionValidity();
+
+CREATE TRIGGER TR_Departments_BeforeDelete_Check
+BEFORE DELETE ON Departments
+FOR EACH ROW EXECUTE FUNCTION FN_Departments_BeforeDelete_Check();
