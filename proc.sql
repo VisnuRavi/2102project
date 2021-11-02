@@ -53,8 +53,10 @@ CREATE OR REPLACE PROCEDURE add_department(dname TEXT) AS $$
 $$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE PROCEDURE remove_department(_did INTEGER) AS $$
+    BEGIN
     DELETE FROM Departments WHERE did = _did;
-$$ LANGUAGE sql;
+    END
+$$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE PROCEDURE add_room(did INTEGER, floor INTEGER, room INTEGER, rname TEXT, capacity INTEGER) AS $$
     BEGIN
