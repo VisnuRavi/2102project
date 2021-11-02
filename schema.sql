@@ -208,6 +208,29 @@ CREATE OR REPLACE FUNCTION FN_Updates_OnAdd_CheckSessionValidity() RETURNS TRIGG
     END;
 $$ LANGUAGE plpgsql;
 
+CREATE OR REPLACE FUNCTION FN_Departments_BeforeDelete_Check() RETURNS TRIGGER AS $$
+    DECLARE
+        has_employees INTEGER;
+        has_meeting_rooms INTEGER;
+    BEGIN
+    SELECT COUNT(*) INTO has_employees
+    FROM Employees e
+    WHERE e.did = OLD.did;
+    IF has_employees > 0 THEN
+        RAISE NOTICE 'There are still employees in this department that have yet to be transferred or removed';
+        RETURN NULL;
+    END IF;
+
+    SELECT COUNT(*) INTO has_meeting_rooms
+    FROM Meeting_Rooms mr
+    WHERE mr.did = OLD.did;
+    IF has_meeting_rooms > 0 THEN
+        RAISE NOTICE 'There are still meeting rooms associated with this department';
+        RETURN NULL;
+    END IF;
+    END;
+$$ LANGUAGE plpgsql;
+
 -- ########################################################################
 --       Triggers
 -- naming conv for trigger: TR_<TableName>_<ActionName>
@@ -225,3 +248,7 @@ FOR EACH ROW EXECUTE FUNCTION FN_Sessions_OnDelete_RemoveAllEmps();
 CREATE TRIGGER TR_Updates_OnAdd_CheckSessionValidity
 AFTER INSERT ON Updates
 FOR EACH ROW EXECUTE FUNCTION FN_Updates_OnAdd_CheckSessionValidity();
+
+CREATE TRIGGER TR_Departments_BeforeDelete_Check
+BEFORE DELETE ON Departments
+FOR EACH ROW EXECUTE FUNCTION FN_Departments_BeforeDelete_Check();
