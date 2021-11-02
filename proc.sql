@@ -462,17 +462,16 @@ CREATE OR REPLACE FUNCTION contact_tracing(_eid INTEGER, _date DATE) RETURNS TAB
         temp_mr RECORD;
         temp_eid RECORD;
     BEGIN
-        SELECT fever FROM Health_Declaration WHERE eid = _eid INTO is_fever;
+        CREATE TEMP TABLE result(eid INTEGER) ON COMMIT DROP;
+        SELECT fever FROM Health_Declaration h WHERE h.eid = _eid INTO is_fever;
 
-        CREATE TABLE result(eid INTEGER);
-
+        -- do nothing and return empty table 
         IF (is_fever = FALSE) THEN
-            RETURN QUERY SELECT eid FROM result;
+            RETURN QUERY SELECT r.eid FROM result r;
         END IF;
 
         -- remove the fever employee from all future meeting room booking, approved or not
         CALL remove_fever_employee_from_all_meetings(_eid);
-
 
         FOR temp_mr IN 
             -- find all meeting rooms the employee had a meeting in in the past 3 days
@@ -490,7 +489,7 @@ CREATE OR REPLACE FUNCTION contact_tracing(_eid INTEGER, _date DATE) RETURNS TAB
             END LOOP;
         END LOOP;
 
-        RETURN QUERY SELECT DISTINCT eid FROM result ORDER BY eid;
+        RETURN QUERY SELECT DISTINCT r.eid FROM result r ORDER BY eid;
     END;
 $$ LANGUAGE plpgsql;
 
