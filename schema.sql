@@ -129,4 +129,4 @@ CREATE TABLE Joins (
     
     FOREIGN KEY (time, date, room, floor) REFERENCES Sessions,
     FOREIGN KEY (eid) REFERENCES Employees
-); 
+);
