@@ -234,11 +234,7 @@ AS $$
 
             IF (room_available > 0) THEN
                 SELECT fever INTO have_fever FROM Health_Declaration WHERE date = CURRENT_DATE AND eid = _booker_eid;
-<<<<<<< HEAD
                 -- raise notice 'hf %, cd % , ct %', have_fever, CURRENT_DATE, CURRENT_TIME;
-=======
-                --raise notice 'hf %, cd % , ct %', have_fever, CURRENT_DATE, CURRENT_TIME;
->>>>>>> 11c4f18498bacaea7c15e8a99628db9fbe05274f
                 IF have_fever = TRUE THEN
                     RAISE EXCEPTION 'Employees having a fever cannot book a room';
                 END IF;
