@@ -48,6 +48,7 @@ DROP TRIGGER IF EXISTS TR_Sessions_OnDelete_RemoveAllEmps ON Sessions;
 DROP TRIGGER IF EXISTS TR_Updates_OnAdd_CheckSessionValidity ON Updates;
 DROP TRIGGER IF EXISTS TR_Departments_BeforeDelete_Check ON Departments;
 DROP TRIGGER IF EXISTS TR_Joins_BeforeInsert_Check ON Joins;
+DROP TRIGGER IF EXISTS TR_Health_Declaration_AfterInsertUpdate_Contact_Tracing ON Health_Declaration;
 
 -- Trigger Functions
 DROP FUNCTION IF EXISTS
@@ -55,7 +56,8 @@ DROP FUNCTION IF EXISTS
     FN_Sessions_OnDelete_RemoveAllEmps(),
     FN_Updates_OnAdd_CheckSessionValidity(),
     FN_Departments_BeforeDelete_Check(),
-    FN_Joins_BeforeInsert_Check();
+    FN_Joins_BeforeInsert_Check(),
+    FN_contact_tracing();
 
 -- ###########################
 --        Basic Functions
@@ -437,7 +439,7 @@ CREATE OR REPLACE FUNCTION contact_tracing(_eid INTEGER, _date DATE) RETURNS TAB
         END IF;
 
         -- remove the fever employee from all future meeting room booking, approved or not
-        CALL remove_fever_employee_from_all_meetings(_eid);
+        CALL remove_fever_employee_from_all_meetings(_date, _eid);
 
         FOR temp_mr IN 
             -- find all meeting rooms the employee had a meeting in in the past 3 days
@@ -826,6 +828,13 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- Wrapper trigger function that calls contact tracing function
+CREATE OR REPLACE FUNCTION FN_contact_tracing() RETURNS TRIGGER AS $$
+BEGIN
+    PERFORM contact_tracing(NEW.eid, NEW.date);
+    RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
 
 -- ########################################################################
 --       Triggers
@@ -852,3 +861,7 @@ FOR EACH ROW EXECUTE FUNCTION FN_Departments_BeforeDelete_Check();
 CREATE TRIGGER TR_Joins_BeforeInsert_Check
 BEFORE INSERT ON Joins
 FOR EACH ROW EXECUTE FUNCTION FN_Joins_BeforeInsert_Check();
+
+CREATE TRIGGER TR_Health_Declaration_AfterInsertUpdate_Contact_Tracing
+AFTER INSERT OR UPDATE ON Health_Declaration 
+FOR EACH ROW WHEN (NEW.fever = TRUE) EXECUTE FUNCTION FN_contact_tracing();
