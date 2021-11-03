@@ -492,27 +492,25 @@ RETURNS TABLE (
     END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE PROCEDURE remove_fever_employee_from_all_meetings(_eid INTEGER) AS $$
+CREATE OR REPLACE PROCEDURE remove_fever_employee_from_all_meetings(_date DATE, _eid INTEGER) AS $$
 BEGIN
     --it is assumed that _eid is already known to have a fever.
     --the constraint of all future meeting is understood as: meeting's date >= current_date
 
-    --delete entire sessions + join entries if _eid is a booker (trigger)
+    --delete entire sessions if booker (trigger)
     IF(_eid IN (SELECT eid FROM Booker)) THEN
         DELETE FROM Sessions
         WHERE
             booker_eid = _eid
             AND
-            date >= CURRENT_DATE;
+            date >= _date;
     END IF;
-
-    --delete relevant join entries
+    --continue on the delete other sessions booker/or employee inside
     DELETE FROM Joins
     WHERE
         eid = _eid
         AND
-        date >= CURRENT_DATE;
-
+        date >= _date;
 END;
 $$ LANGUAGE plpgsql;
 
