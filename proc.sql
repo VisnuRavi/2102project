@@ -56,7 +56,7 @@ DROP FUNCTION IF EXISTS
     FN_Sessions_OnDelete_RemoveAllEmps(),
     FN_Updates_OnAdd_CheckSessionValidity(),
     FN_Departments_BeforeDelete_Check(),
-    FN_Employees_AfterUpdate_EditAffectedMeetings();
+    FN_Employees_AfterUpdate_EditAffectedMeetings(),
     FN_Joins_BeforeInsert_Check();
 
 -- ###########################
