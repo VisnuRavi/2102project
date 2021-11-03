@@ -338,12 +338,13 @@ CREATE OR REPLACE PROCEDURE leave_meeting(_floor INTEGER, _room INTEGER, _date D
     _eid INTEGER) 
 AS $$
     DECLARE
-        approver_eid INTEGER = NULL;
+        approver_eid INTEGER;
+        booker_eid INTEGER;
         current_hour_check TIME := _start_hour;
         current_hour_remove TIME := _start_hour;
     BEGIN
         WHILE current_hour_check < _end_hour LOOP
-            SELECT s.approver_eid INTO approver_eid
+            SELECT s.approver_eid, s.booker_eid INTO approver_eid, booker_eid
             FROM Sessions s
             WHERE s.floor = _floor AND
             s.room = _room AND
@@ -353,6 +354,11 @@ AS $$
             -- Ensure employee can only leave unapproved meetings
             IF approver_eid IS NOT NULL THEN
                 RAISE EXCEPTION 'Session starting at % already approved, employees may not leave an approved session.', current_hour_check; 
+            END IF;
+
+            -- Ensure booker cannot leave a session they have booked themselves
+            IF booker_eid = _eid THEN
+                RAISE EXCEPTION 'Session starting at % is booked by this employee, employees may not leave a session they have booked themselves.', current_hour_check;
             END IF;
 
             current_hour_check := current_hour_check + INTERVAL '1 hour';
