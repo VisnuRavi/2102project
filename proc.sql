@@ -313,58 +313,8 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE PROCEDURE join_meeting(_floor INTEGER, _room INTEGER, _date DATE, _time TIME, _eid INTEGER) AS $$
-DECLARE
-    max_capacity INTEGER = NULL;
-    curr_emp_count INTEGER = NULL;
 BEGIN
-    --check if employee is alr added to a diff meeting at same time/date -> Disallow that
-    --dissallow to join past meetings
-    --resign
-    IF((SELECT COUNT(*) FROM Sessions WHERE floor = _floor AND room = _room AND date = _date AND time = _time) <> 1) THEN
-        RAISE EXCEPTION 'Invalid meeting information entered';
-    ELSEIF ((SELECT approver_eid FROM Sessions WHERE floor = _floor AND room = _room AND date = _date AND time = _time) IS NOT NULL) THEN
-        RAISE EXCEPTION 'Employees can only join non-approved meetings';
-    ELSEIF ((SELECT fever FROM Health_Declaration WHERE date = CURRENT_DATE AND eid = _eid) = TRUE) THEN
-        RAISE EXCEPTION 'Employee is having a fever';
-    ELSEIF ((_eid IN (SELECT eid FROM Joins WHERE room = _room AND _floor = floor AND time = _time AND date = _date)) = TRUE) THEN
-        RAISE EXCEPTION 'Employee % already added to Meeting on % % at room: %, floor: % ',_eid,_date, _time, _room, _floor;
-    ELSEIF ((SELECT resigned_date FROM Employees WHERE eid = _eid) IS NOT NULL) THEN
-        RAISE EXCEPTION 'Attempt by resigned employee to join meeting!';
-    ELSEIF ((SELECT employee_concurrent_meeting(_eid, _date, _time, _time + INTERVAL '1 hour')) = TRUE) THEN
-        RAISE EXCEPTION 'Employee already in a different meeting in the specified date and time';
-    ELSE
-        --maximum allowable room capacity on session's date for relevant room
-        SELECT new_cap INTO max_capacity 
-        FROM updates
-        WHERE 
-            room = _room 
-            AND 
-            floor = _floor
-            AND
-            --date <= CURRENT_DATE
-            date <= _date
-        ORDER BY date DESC
-        LIMIT 1;
-        --count the current employees in booking-to-join
-        SELECT COUNT(*) INTO curr_emp_count
-        FROM Joins j
-        WHERE 
-            j.room = _room
-            AND
-            j.floor = _floor
-            AND
-            j.time = _time
-            AND
-            j.date = _date;
-
-        --check whether this joining employee can fit the maximum allowable room capacity
-        IF ((max_capacity - curr_emp_count) >= 1) THEN
-            --add the dude
-            INSERT INTO Joins VALUES (_eid, _room, _floor, _time, _date);
-        ELSE
-            RAISE EXCEPTION 'Meeting on % % at room: %, floor: % is at already at full capacity!', _date, _time, _room, _floor;
-        END IF;
-    END IF;
+    INSERT INTO Joins VALUES (_eid, _room, _floor, _time, _date);
 END;
 $$ LANGUAGE plpgsql;
 

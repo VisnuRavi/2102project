@@ -208,6 +208,93 @@ CREATE OR REPLACE FUNCTION FN_Updates_OnAdd_CheckSessionValidity() RETURNS TRIGG
     END;
 $$ LANGUAGE plpgsql;
 
+--On insertion in Joins table, check the necessary constraints
+CREATE OR REPLACE FUNCTION FN_Joins_BeforeInsert_Check() RETURNS TRIGGER AS $$
+DECLARE
+    max_capacity INTEGER = 0;
+    curr_emp_count INTEGER = 0;
+    num_of_changes INTEGER = 0;
+BEGIN
+    IF((NEW.date < CURRENT_DATE)) THEN
+        RAISE NOTICE 'Employee % cannot join meeting (room: %, floor: %, time: %, date: %): Please join only future meetings! (date)', 
+                    NEW.eid, NEW.room, NEW.floor, NEW.time, NEW.date;
+        RETURN NULL;
+    ELSEIF((NEW.date = CURRENT_DATE) AND NEW.time < CURRENT_TIME) THEN
+        RAISE NOTICE 'Employee % cannot join meeting (room: %, floor: %, time: %, date: %): Please join only future meetings! (time)', 
+                    NEW.eid, NEW.room, NEW.floor, NEW.time, NEW.date;
+        RETURN NULL;
+    ELSEIF((SELECT COUNT(*) FROM Sessions WHERE floor = NEW.floor AND room = NEW.room AND date = NEW.date AND time = NEW.time) <> 1) THEN
+        RAISE NOTICE 'Employee % cannot join meeting (room: %, floor: %, time: %, date: %): Invalid Meeting Session Information', 
+                    NEW.eid, NEW.room, NEW.floor, NEW.time, NEW.date;
+        RETURN NULL;
+    ELSEIF((SELECT approver_eid FROM Sessions WHERE floor = NEW.floor AND room = NEW.room AND date = NEW.date AND time = NEW.time) IS NOT NULL) THEN
+        RAISE NOTICE 'Employee % cannot join meeting (room: %, floor: %, time: %, date: %): Employees can only join non-approved meetings', 
+                    NEW.eid, NEW.room, NEW.floor, NEW.time, NEW.date;
+        RETURN NULL;
+    ELSEIF((SELECT fever FROM Health_Declaration WHERE date = CURRENT_DATE AND eid = NEW.eid) = TRUE) THEN
+        RAISE NOTICE 'Employee % cannot join meeting (room: %, floor: %, time: %, date: %): Employee is having a fever', 
+                    NEW.eid, NEW.room, NEW.floor, NEW.time, NEW.date;
+        RETURN NULL;
+    ELSEIF((NEW.eid IN (SELECT eid FROM Joins WHERE room = NEW.room AND NEW.floor = floor AND time = NEW.time AND date = NEW.date)) = TRUE) THEN
+        RAISE NOTICE 'Employee % cannot join meeting (room: %, floor: %, time: %, date: %): Employee is already admitted to this meeting', 
+                    NEW.eid, NEW.room, NEW.floor, NEW.time, NEW.date;
+        RETURN NULL;
+    ELSEIF((SELECT resigned_date FROM Employees WHERE eid = NEW.eid) IS NOT NULL) THEN
+        RAISE NOTICE 'Employee % cannot join meeting (room: %, floor: %, time: %, date: %): Employee is resigned', 
+                    NEW.eid, NEW.room, NEW.floor, NEW.time, NEW.date;
+        RETURN NULL;
+    ELSEIF ((SELECT employee_concurrent_meeting(NEW.eid, NEW.date, NEW.time, NEW.time + INTERVAL '1 hour')) = TRUE) THEN
+        RAISE NOTICE 'Employee % cannot join meeting (room: %, floor: %, time: %, date: %): Employee is already admitted to concurently timed meeting', 
+                    NEW.eid, NEW.room, NEW.floor, NEW.time, NEW.date;
+        RETURN NULL;
+    ELSE
+        SELECT COUNT(*) INTO curr_emp_count
+        FROM Joins j
+        WHERE 
+            j.room = NEW.room
+            AND
+            j.floor = NEW.floor
+            AND
+            j.time = NEW.time
+            AND
+            j.date = NEW.date;
+
+        --maximum allowable room capacity on session's date for relevant room
+        SELECT new_cap INTO max_capacity 
+        FROM updates
+        WHERE 
+            room = NEW.room 
+            AND 
+            floor = NEW.floor
+            AND
+            --date of meeting strictly AFTER change_date in Updates.
+            date < NEW.date
+        ORDER BY date DESC
+        LIMIT 1;
+
+        IF(max_capacity IS NULL) THEN
+            SELECT new_cap INTO max_capacity 
+            FROM updates
+            WHERE 
+                room = NEW.room 
+                AND 
+                floor = NEW.floor;
+        END IF;
+
+        IF ((max_capacity - curr_emp_count) >= 1) THEN
+            --add the employee
+            RETURN NEW;
+        ELSE
+            RAISE NOTICE 'Employee % cannot join meeting (room: %, floor: %, time: %, date: %): Meeting is at full capacity (%)', 
+                    NEW.eid, NEW.room, NEW.floor, NEW.time, NEW.date, max_capacity;
+            RETURN NULL;
+        END IF;
+    END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+
+
 -- ########################################################################
 --       Triggers
 -- naming conv for trigger: TR_<TableName>_<ActionName>
@@ -225,3 +312,7 @@ FOR EACH ROW EXECUTE FUNCTION FN_Sessions_OnDelete_RemoveAllEmps();
 CREATE TRIGGER TR_Updates_OnAdd_CheckSessionValidity
 AFTER INSERT ON Updates
 FOR EACH ROW EXECUTE FUNCTION FN_Updates_OnAdd_CheckSessionValidity();
+
+CREATE TRIGGER TR_Joins_BeforeInsert_Check
+BEFORE INSERT ON Joins
+FOR EACH ROW EXECUTE FUNCTION FN_Joins_BeforeInsert_Check();
