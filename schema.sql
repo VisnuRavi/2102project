@@ -127,6 +127,7 @@ CREATE TABLE Joins (
     time TIME,
     date DATE,
     
+    PRIMARY KEY (eid, room, floor, time, date),
     FOREIGN KEY (time, date, room, floor) REFERENCES Sessions,
     FOREIGN KEY (eid) REFERENCES Employees
 );
