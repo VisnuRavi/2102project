@@ -47,11 +47,8 @@ DROP TRIGGER IF EXISTS TR_Contact_Numbers_Check_Max ON Contact_Numbers;
 DROP TRIGGER IF EXISTS TR_Sessions_OnDelete_RemoveAllEmps ON Sessions;
 DROP TRIGGER IF EXISTS TR_Updates_OnAdd_CheckSessionValidity ON Updates;
 DROP TRIGGER IF EXISTS TR_Departments_BeforeDelete_Check ON Departments;
-<<<<<<< HEAD
 DROP TRIGGER IF EXISTS TR_Employees_AfterUpdate_EditAffectedMeetings ON Employees;
-=======
 DROP TRIGGER IF EXISTS TR_Joins_BeforeInsert_Check ON Joins;
->>>>>>> master
 
 -- Trigger Functions
 DROP FUNCTION IF EXISTS
@@ -59,11 +56,8 @@ DROP FUNCTION IF EXISTS
     FN_Sessions_OnDelete_RemoveAllEmps(),
     FN_Updates_OnAdd_CheckSessionValidity(),
     FN_Departments_BeforeDelete_Check(),
-<<<<<<< HEAD
     FN_Employees_AfterUpdate_EditAffectedMeetings();
-=======
     FN_Joins_BeforeInsert_Check();
->>>>>>> master
 
 -- ###########################
 --        Basic Functions
@@ -896,12 +890,10 @@ CREATE TRIGGER TR_Departments_BeforeDelete_Check
 BEFORE DELETE ON Departments
 FOR EACH ROW EXECUTE FUNCTION FN_Departments_BeforeDelete_Check();
 
-<<<<<<< HEAD
 CREATE TRIGGER TR_Employees_AfterUpdate_EditAffectedMeetings
 AFTER UPDATE ON Employees
 FOR EACH ROW EXECUTE FUNCTION FN_Employees_AfterUpdate_EditAffectedMeetings();
-=======
+
 CREATE TRIGGER TR_Joins_BeforeInsert_Check
 BEFORE INSERT ON Joins
 FOR EACH ROW EXECUTE FUNCTION FN_Joins_BeforeInsert_Check();
->>>>>>> master
