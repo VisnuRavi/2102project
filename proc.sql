@@ -17,7 +17,7 @@ DROP PROCEDURE IF EXISTS
     book_room(INTEGER, INTEGER, DATE, TIME, TIME, INTEGER),
     unbook_room(INTEGER, INTEGER, DATE, TIME, TIME, INTEGER),
     join_meeting(INTEGER, INTEGER, DATE, TIME, INTEGER),
-    leave_meeting(INTEGER, INTEGER, DATE, TIME, INTEGER),
+    leave_meeting(INTEGER, INTEGER, DATE, TIME, TIME, INTEGER),
     approve_meeting(INTEGER, INTEGER, DATE, TIME, INTEGER)
 CASCADE;
 
@@ -42,11 +42,12 @@ DROP FUNCTION IF EXISTS
     view_manager_report(DATE,INTEGER) 
 CASCADE;
 
--- Trigger, seems to work when done individually
+-- Trigger, seems to only work when done individually
 DROP TRIGGER IF EXISTS TR_Contact_Numbers_Check_Max ON Contact_Numbers;
 DROP TRIGGER IF EXISTS TR_Sessions_OnDelete_RemoveAllEmps ON Sessions;
 DROP TRIGGER IF EXISTS TR_Updates_OnAdd_CheckSessionValidity ON Updates;
 DROP TRIGGER IF EXISTS TR_Departments_BeforeDelete_Check ON Departments;
+DROP TRIGGER IF EXISTS TR_Employees_AfterUpdate_EditAffectedMeetings ON Employees;
 DROP TRIGGER IF EXISTS TR_Joins_BeforeInsert_Check ON Joins;
 DROP TRIGGER IF EXISTS TR_Health_Declaration_AfterInsertUpdate_Contact_Tracing ON Health_Declaration;
 
@@ -58,14 +59,15 @@ DROP FUNCTION IF EXISTS
     FN_Departments_BeforeDelete_Check(),
     FN_Joins_BeforeInsert_Check(),
     FN_contact_tracing();
+    FN_Employees_AfterUpdate_EditAffectedMeetings(),
 
 -- ###########################
 --        Basic Functions
 -- ###########################
 
-CREATE OR REPLACE PROCEDURE add_department(dname TEXT) AS $$
+CREATE OR REPLACE PROCEDURE add_department(did INTEGER, dname TEXT) AS $$
     BEGIN
-        INSERT INTO Departments (dname) VALUES (dname);
+        INSERT INTO Departments (did, dname) VALUES (did, dname);
     END;
 $$ LANGUAGE plpgsql;
 
@@ -234,7 +236,7 @@ AS $$
 
             IF (room_available > 0) THEN
                 SELECT fever INTO have_fever FROM Health_Declaration WHERE date = CURRENT_DATE AND eid = _booker_eid;
-                raise notice 'hf %, cd % , ct %', have_fever, CURRENT_DATE, CURRENT_TIME;
+                -- raise notice 'hf %, cd % , ct %', have_fever, CURRENT_DATE, CURRENT_TIME;
                 IF have_fever = TRUE THEN
                     RAISE EXCEPTION 'Employees having a fever cannot book a room';
                 END IF;
@@ -336,31 +338,46 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE PROCEDURE leave_meeting(_floor INTEGER, _room INTEGER, _date DATE, _time TIME, 
+CREATE OR REPLACE PROCEDURE leave_meeting(_floor INTEGER, _room INTEGER, _date DATE, _start_hour TIME, _end_hour TIME, 
     _eid INTEGER) 
 AS $$
     DECLARE
-        approver_eid INTEGER = NULL;
+        approver_eid INTEGER;
+        booker_eid INTEGER;
+        current_hour_check TIME := _start_hour;
+        current_hour_remove TIME := _start_hour;
     BEGIN
-        SELECT s.approver_eid
-        FROM Sessions s
-        WHERE s.floor = _floor AND
-        s.room = _room AND
-        s.date = _date AND
-        s.time = _time
-        INTO approver_eid;
+        WHILE current_hour_check < _end_hour LOOP
+            SELECT s.approver_eid, s.booker_eid INTO approver_eid, booker_eid
+            FROM Sessions s
+            WHERE s.floor = _floor AND
+            s.room = _room AND
+            s.date = _date AND
+            s.time = current_hour_check;
 
-        -- Ensure employee can only leave unapproved meetings
-        IF approver_eid IS NOT NULL THEN
-            RAISE EXCEPTION 'Meeting already approved'; 
-        END IF;
+            -- Ensure employee can only leave unapproved meetings
+            IF approver_eid IS NOT NULL THEN
+                RAISE EXCEPTION 'Session starting at % already approved, employees may not leave an approved session.', current_hour_check; 
+            END IF;
 
-        DELETE FROM Joins
-        WHERE floor = _floor AND
-        room = _room AND
-        date = _date AND
-        time = _time AND
-        eid = _eid; 
+            -- Ensure booker cannot leave a session they have booked themselves
+            IF booker_eid = _eid THEN
+                RAISE EXCEPTION 'Session starting at % is booked by this employee, employees may not leave a session they have booked themselves.', current_hour_check;
+            END IF;
+
+            current_hour_check := current_hour_check + INTERVAL '1 hour';
+        END LOOP;
+
+        WHILE current_hour_remove < _end_hour LOOP
+            DELETE FROM Joins
+            WHERE floor = _floor AND
+            room = _room AND
+            date = _date AND
+            time = current_hour_remove AND
+            eid = _eid;
+
+            current_hour_remove := current_hour_remove + INTERVAL '1 hour';
+        END LOOP;
     END;
 $$ LANGUAGE plpgsql;
 
@@ -447,10 +464,10 @@ CREATE OR REPLACE FUNCTION contact_tracing(_eid INTEGER, _date DATE) RETURNS TAB
         LOOP    
             -- find all employees that were in the meeting room in the past 3 days
             FOR temp_eid IN
-                SELECT eid FROM three_day_room_employee(temp_mr.room, temp_mr.floor)
+                SELECT tdre.eid FROM three_day_room_employee(temp_mr.floor, temp_mr.room, _date) tdre
             LOOP
                 -- removes the employee from future meeting (both approved and not approved) in the next 7 days
-                CALL remove_employee_from_future_meeting_seven_days(temp_eid.eid);
+                CALL remove_employee_from_future_meeting_seven_days(_date, temp_eid.eid);
                 
                 -- add the eid to our result
                 INSERT INTO result values(temp_eid.eid);
@@ -836,6 +853,44 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+CREATE OR REPLACE FUNCTION FN_Employees_AfterUpdate_EditAffectedMeetings()
+RETURNS TRIGGER AS $$
+    DECLARE
+    is_booker BOOLEAN;
+    is_manager BOOLEAN;
+    BEGIN
+        IF NEW.resigned_date IS NOT NULL THEN
+            SELECT (EXISTS (SELECT 1 FROM MANAGER WHERE eid = NEW.eid)) INTO is_manager;
+            SELECT (EXISTS (SELECT 1 FROM BOOKER WHERE eid = NEW.eid)) INTO is_booker;
+
+            IF is_manager = TRUE THEN
+                UPDATE Sessions SET approver_eid = NULL 
+                WHERE date > NEW.resigned_date
+                AND approver_eid = NEW.eid;
+            END IF;
+
+            IF is_booker = TRUE THEN
+                DELETE FROM Joins j 
+                USING Sessions s
+                WHERE s.booker_eid = NEW.eid
+                AND j.room = s.room AND j.floor = s.floor AND j.date = s.date AND j.time = s.time
+                AND j.date > NEW.resigned_date;
+
+                DELETE FROM Sessions
+                WHERE booker_eid = NEW.eid
+                AND date > NEW.resigned_date;
+
+            END IF;
+                
+                DELETE from Joins 
+                WHERE eid = NEW.eid 
+                AND date > NEW.resigned_date;
+
+        END IF;
+        RETURN NULL;
+    END;
+$$ LANGUAGE plpgsql;
+
 -- ########################################################################
 --       Triggers
 -- naming conv for trigger: TR_<TableName>_<ActionName>
@@ -857,6 +912,10 @@ FOR EACH ROW EXECUTE FUNCTION FN_Updates_OnAdd_CheckSessionValidity();
 CREATE TRIGGER TR_Departments_BeforeDelete_Check
 BEFORE DELETE ON Departments
 FOR EACH ROW EXECUTE FUNCTION FN_Departments_BeforeDelete_Check();
+
+CREATE TRIGGER TR_Employees_AfterUpdate_EditAffectedMeetings
+AFTER UPDATE ON Employees
+FOR EACH ROW EXECUTE FUNCTION FN_Employees_AfterUpdate_EditAffectedMeetings();
 
 CREATE TRIGGER TR_Joins_BeforeInsert_Check
 BEFORE INSERT ON Joins
