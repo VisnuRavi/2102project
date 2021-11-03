@@ -16,7 +16,7 @@ CREATE TYPE KIND AS ENUM ('Junior', 'Senior', 'Manager');
 -- ##################
 
 CREATE TABLE Departments (
-    did SERIAL PRIMARY KEY,
+    did INTEGER PRIMARY KEY,
     dname TEXT
 ); 
 
