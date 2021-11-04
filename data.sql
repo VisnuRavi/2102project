@@ -14,82 +14,82 @@ INSERT INTO Departments VALUES
 INSERT INTO Employees VALUES
 --eid format: junior-> 1xx, senior->2xx, manager-><3xx
 --ename format: name_<type>_<eid>
---email format: <ename>@mail.com
+--email format: <eid>@company.com
 --did: each department has 2 juniors, 2 seniors, 2 managers
 --resign_date: default null
 
-(100, 'name_j_100', 'name_j_100@mail.com', 900, NULL),
-(101, 'name_j_101', 'name_j_101@mail.com', 900, NULL),
-(200, 'name_s_200', 'name_s_200@mail.com', 900, NULL),
-(201, 'name_s_201', 'name_s_201@mail.com', 900, NULL),
-(300, 'name_m_300', 'name_m_300@mail.com', 900, NULL),
-(301, 'name_m_301', 'name_m_301@mail.com', 900, NULL),
+(100, 'name_j_100', '100@company.com', 900, NULL),
+(101, 'name_j_101', '101@company.com', 900, NULL),
+(200, 'name_s_200', '200@company.com', 900, NULL),
+(201, 'name_s_201', '201@company.com', 900, NULL),
+(300, 'name_m_300', '300@company.com', 900, NULL),
+(301, 'name_m_301', '301@company.com', 900, NULL),
 
-(102, 'name_j_102', 'name_j_102@mail.com', 901, NULL),
-(103, 'name_j_103', 'name_j_103@mail.com', 901, NULL),
-(202, 'name_s_202', 'name_s_202@mail.com', 901, NULL),
-(203, 'name_s_203', 'name_s_203@mail.com', 901, NULL),
-(302, 'name_m_302', 'name_m_302@mail.com', 901, NULL),
-(303, 'name_m_303', 'name_m_303@mail.com', 901, NULL),
+(102, 'name_j_102', '102@company.com', 901, NULL),
+(103, 'name_j_103', '103@company.com', 901, NULL),
+(202, 'name_s_202', '202@company.com', 901, NULL),
+(203, 'name_s_203', '203@company.com', 901, NULL),
+(302, 'name_m_302', '302@company.com', 901, NULL),
+(303, 'name_m_303', '303@company.com', 901, NULL),
 
-(104, 'name_j_104', 'name_j_104@mail.com', 902, NULL),
-(105, 'name_j_105', 'name_j_105@mail.com', 902, NULL),
-(204, 'name_s_204', 'name_s_204@mail.com', 902, NULL),
-(205, 'name_s_205', 'name_s_205@mail.com', 902, NULL),
-(304, 'name_m_304', 'name_m_304@mail.com', 902, NULL),
-(305, 'name_m_305', 'name_m_305@mail.com', 902, NULL),
+(104, 'name_j_104', '104@company.com', 902, NULL),
+(105, 'name_j_105', '105@company.com', 902, NULL),
+(204, 'name_s_204', '204@company.com', 902, NULL),
+(205, 'name_s_205', '205@company.com', 902, NULL),
+(304, 'name_m_304', '304@company.com', 902, NULL),
+(305, 'name_m_305', '305@company.com', 902, NULL),
 
-(106, 'name_j_106', 'name_j_106@mail.com', 903, NULL),
-(107, 'name_j_107', 'name_j_107@mail.com', 903, NULL),
-(206, 'name_s_206', 'name_s_206@mail.com', 903, NULL),
-(207, 'name_s_207', 'name_s_207@mail.com', 903, NULL),
-(306, 'name_m_306', 'name_m_306@mail.com', 903, NULL),
-(307, 'name_m_307', 'name_m_307@mail.com', 903, NULL),
+(106, 'name_j_106', '106@company.com', 903, NULL),
+(107, 'name_j_107', '107@company.com', 903, NULL),
+(206, 'name_s_206', '206@company.com', 903, NULL),
+(207, 'name_s_207', '207@company.com', 903, NULL),
+(306, 'name_m_306', '306@company.com', 903, NULL),
+(307, 'name_m_307', '307@company.com', 903, NULL),
 
-(108, 'name_j_108', 'name_j_108@mail.com', 904, NULL),
-(109, 'name_j_109', 'name_j_109@mail.com', 904, NULL),
-(208, 'name_s_208', 'name_s_208@mail.com', 904, NULL),
-(209, 'name_s_209', 'name_s_209@mail.com', 904, NULL),
-(308, 'name_m_308', 'name_m_308@mail.com', 904, NULL),
-(309, 'name_m_309', 'name_m_309@mail.com', 904, NULL);
+(108, 'name_j_108', '108@company.com', 904, NULL),
+(109, 'name_j_109', '109@company.com', 904, NULL),
+(208, 'name_s_208', '208@company.com', 904, NULL),
+(209, 'name_s_209', '209@company.com', 904, NULL),
+(308, 'name_m_308', '308@company.com', 904, NULL),
+(309, 'name_m_309', '309@company.com', 904, NULL);
 
 /*
 debugging: #83 #80 #68
 INSERT INTO Employees VALUES
-(100, 'name_j_100', 'name_j_100@mail.com', 900, NULL),
-(101, 'name_j_101', 'name_j_101@mail.com', 900, NULL),
-(200, 'name_s_200', 'name_s_200@mail.com', 900, NULL),
-(201, 'name_s_201', 'name_s_201@mail.com', 900, NULL),
-(300, 'name_m_300', 'name_m_300@mail.com', 900, NULL),
-(301, 'name_m_301', 'name_m_301@mail.com', 900, CURRENT_DATE),
+(100, 'name_j_100', '100@mail.com', 900, NULL),
+(101, 'name_j_101', '101@mail.com', 900, NULL),
+(200, 'name_s_200', '200@mail.com', 900, NULL),
+(201, 'name_s_201', '201@mail.com', 900, NULL),
+(300, 'name_m_300', '300@mail.com', 900, NULL),
+(301, 'name_m_301', '301@mail.com', 900, CURRENT_DATE),
 
-(102, 'name_j_102', 'name_j_102@mail.com', 901, NULL),
-(103, 'name_j_103', 'name_j_103@mail.com', 901, NULL),
-(202, 'name_s_202', 'name_s_202@mail.com', 901, NULL),
-(203, 'name_s_203', 'name_s_203@mail.com', 901, NULL),
-(302, 'name_m_302', 'name_m_302@mail.com', 901, NULL),
-(303, 'name_m_303', 'name_m_303@mail.com', 901, CURRENT_DATE),
+(102, 'name_j_102', '102@company.com', 901, NULL),
+(103, 'name_j_103', '103@company.com', 901, NULL),
+(202, 'name_s_202', '202@company.com', 901, NULL),
+(203, 'name_s_203', '203@company.com', 901, NULL),
+(302, 'name_m_302', '302@company.com', 901, NULL),
+(303, 'name_m_303', '303@company.com', 901, CURRENT_DATE),
 
-(104, 'name_j_104', 'name_j_104@mail.com', 902, NULL),
-(105, 'name_j_105', 'name_j_105@mail.com', 902, NULL),
-(204, 'name_s_204', 'name_s_204@mail.com', 902, NULL),
-(205, 'name_s_205', 'name_s_205@mail.com', 902, NULL),
-(304, 'name_m_304', 'name_m_304@mail.com', 902, NULL),
-(305, 'name_m_305', 'name_m_305@mail.com', 902, CURRENT_DATE),
+(104, 'name_j_104', '104@company.com', 902, NULL),
+(105, 'name_j_105', '105@company.com', 902, NULL),
+(204, 'name_s_204', '204@company.com', 902, NULL),
+(205, 'name_s_205', '205@company.com', 902, NULL),
+(304, 'name_m_304', '304@company.com', 902, NULL),
+(305, 'name_m_305', '305@company.com', 902, CURRENT_DATE),
 
-(106, 'name_j_106', 'name_j_106@mail.com', 903, NULL),
-(107, 'name_j_107', 'name_j_107@mail.com', 903, NULL),
-(206, 'name_s_206', 'name_s_206@mail.com', 903, NULL),
-(207, 'name_s_207', 'name_s_207@mail.com', 903, NULL),
-(306, 'name_m_306', 'name_m_306@mail.com', 903, NULL),
-(307, 'name_m_307', 'name_m_307@mail.com', 903, CURRENT_DATE),
+(106, 'name_j_106', '106@company.com', 903, NULL),
+(107, 'name_j_107', '107@company.com', 903, NULL),
+(206, 'name_s_206', '206@company.com', 903, NULL),
+(207, 'name_s_207', '207@company.com', 903, NULL),
+(306, 'name_m_306', '306@company.com', 903, NULL),
+(307, 'name_m_307', '307@company.com', 903, CURRENT_DATE),
 
-(108, 'name_j_108', 'name_j_108@mail.com', 904, NULL),
-(109, 'name_j_109', 'name_j_109@mail.com', 904, NULL),
-(208, 'name_s_208', 'name_s_208@mail.com', 904, NULL),
-(209, 'name_s_209', 'name_s_209@mail.com', 904, NULL),
-(308, 'name_m_308', 'name_m_308@mail.com', 904, NULL),
-(309, 'name_m_309', 'name_m_309@mail.com', 904, CURRENT_DATE);
+(108, 'name_j_108', '108@company.com', 904, NULL),
+(109, 'name_j_109', '109@company.com', 904, NULL),
+(208, 'name_s_208', '208@company.com', 904, NULL),
+(209, 'name_s_209', '209@company.com', 904, NULL),
+(308, 'name_m_308', '308@company.com', 904, NULL),
+(309, 'name_m_309', '309@company.com', 904, CURRENT_DATE);
 
 */
 
