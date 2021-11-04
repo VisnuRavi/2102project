@@ -446,6 +446,7 @@ CREATE OR REPLACE FUNCTION contact_tracing(_eid INTEGER, _date DATE) RETURNS TAB
         is_fever BOOLEAN;
         temp_mr RECORD;
         temp_eid RECORD;
+        original_eid RECORD;
     BEGIN
         CREATE TEMP TABLE result(eid INTEGER) ON COMMIT DROP;
         SELECT fever FROM Health_Declaration h WHERE h.eid = _eid INTO is_fever;
@@ -474,7 +475,15 @@ CREATE OR REPLACE FUNCTION contact_tracing(_eid INTEGER, _date DATE) RETURNS TAB
             END LOOP;
         END LOOP;
 
-        RETURN QUERY SELECT DISTINCT r.eid FROM result r ORDER BY eid;
+        -- exclude queried employee as close contact
+        RETURN QUERY 
+            SELECT DISTINCT r.eid 
+            FROM result r
+            EXCEPT 
+            SELECT e.eid
+            FROM employees e
+            WHERE e.eid = _eid
+            ORDER BY eid;
     END;
 $$ LANGUAGE plpgsql;
 
