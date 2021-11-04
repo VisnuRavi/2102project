@@ -1,6 +1,6 @@
 -- Basic functions
 DROP PROCEDURE IF EXISTS 
-    add_department(TEXT), 
+    add_department(INTEGER, TEXT), 
     remove_department(INTEGER),
     add_room(INTEGER, INTEGER, INTEGER, TEXT, INTEGER),
     change_capacity(INTEGER, INTEGER, INTEGER, DATE, INTEGER),
@@ -25,7 +25,7 @@ CASCADE;
 DROP PROCEDURE IF EXISTS 
     declare_health(INTEGER, DATE, FLOAT(1)),
     remove_employee_from_future_meeting_seven_days(DATE, INTEGER),
-    remove_fever_employee_from_all_meetings(INTEGER)
+    remove_fever_employee_from_all_meetings(DATE, INTEGER)
 CASCADE;
 
 DROP FUNCTION IF EXISTS 
@@ -49,6 +49,7 @@ DROP TRIGGER IF EXISTS TR_Updates_OnAdd_CheckSessionValidity ON Updates;
 DROP TRIGGER IF EXISTS TR_Departments_BeforeDelete_Check ON Departments;
 DROP TRIGGER IF EXISTS TR_Employees_AfterUpdate_EditAffectedMeetings ON Employees;
 DROP TRIGGER IF EXISTS TR_Joins_BeforeInsert_Check ON Joins;
+DROP TRIGGER IF EXISTS TR_Health_Declaration_AfterInsertUpdate_Contact_Tracing ON Health_Declaration;
 
 -- Trigger Functions
 DROP FUNCTION IF EXISTS
@@ -56,8 +57,9 @@ DROP FUNCTION IF EXISTS
     FN_Sessions_OnDelete_RemoveAllEmps(),
     FN_Updates_OnAdd_CheckSessionValidity(),
     FN_Departments_BeforeDelete_Check(),
-    FN_Employees_AfterUpdate_EditAffectedMeetings(),
-    FN_Joins_BeforeInsert_Check();
+    FN_Joins_BeforeInsert_Check(),
+    FN_contact_tracing(),
+    FN_Employees_AfterUpdate_EditAffectedMeetings();
 
 -- ###########################
 --        Basic Functions
@@ -445,17 +447,16 @@ CREATE OR REPLACE FUNCTION contact_tracing(_eid INTEGER, _date DATE) RETURNS TAB
         temp_mr RECORD;
         temp_eid RECORD;
     BEGIN
-        SELECT fever FROM Health_Declaration WHERE eid = _eid INTO is_fever;
+        CREATE TEMP TABLE result(eid INTEGER) ON COMMIT DROP;
+        SELECT fever FROM Health_Declaration h WHERE h.eid = _eid INTO is_fever;
 
-        CREATE TABLE result(eid INTEGER);
-
+        -- do nothing and return empty table 
         IF (is_fever = FALSE) THEN
-            RETURN QUERY SELECT eid FROM result;
+            RETURN QUERY SELECT r.eid FROM result r;
         END IF;
 
         -- remove the fever employee from all future meeting room booking, approved or not
-        CALL remove_fever_employee_from_all_meetings(_eid);
-
+        CALL remove_fever_employee_from_all_meetings(_date, _eid);
 
         FOR temp_mr IN 
             -- find all meeting rooms the employee had a meeting in in the past 3 days
@@ -463,17 +464,17 @@ CREATE OR REPLACE FUNCTION contact_tracing(_eid INTEGER, _date DATE) RETURNS TAB
         LOOP    
             -- find all employees that were in the meeting room in the past 3 days
             FOR temp_eid IN
-                SELECT eid FROM three_day_room_employee(temp_mr.room, temp_mr.floor)
+                SELECT tdre.eid FROM three_day_room_employee(temp_mr.floor, temp_mr.room, _date) tdre
             LOOP
                 -- removes the employee from future meeting (both approved and not approved) in the next 7 days
-                CALL remove_employee_from_future_meeting_seven_days(temp_eid.eid);
+                CALL remove_employee_from_future_meeting_seven_days(_date, temp_eid.eid);
                 
                 -- add the eid to our result
                 INSERT INTO result values(temp_eid.eid);
             END LOOP;
         END LOOP;
 
-        RETURN QUERY SELECT DISTINCT eid FROM result ORDER BY eid;
+        RETURN QUERY SELECT DISTINCT r.eid FROM result r ORDER BY eid;
     END;
 $$ LANGUAGE plpgsql;
 
@@ -844,6 +845,13 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- Wrapper trigger function that calls contact tracing function
+CREATE OR REPLACE FUNCTION FN_contact_tracing() RETURNS TRIGGER AS $$
+BEGIN
+    PERFORM contact_tracing(NEW.eid, NEW.date);
+    RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION FN_Employees_AfterUpdate_EditAffectedMeetings()
 RETURNS TRIGGER AS $$
@@ -912,3 +920,7 @@ FOR EACH ROW EXECUTE FUNCTION FN_Employees_AfterUpdate_EditAffectedMeetings();
 CREATE TRIGGER TR_Joins_BeforeInsert_Check
 BEFORE INSERT ON Joins
 FOR EACH ROW EXECUTE FUNCTION FN_Joins_BeforeInsert_Check();
+
+CREATE TRIGGER TR_Health_Declaration_AfterInsertUpdate_Contact_Tracing
+AFTER INSERT OR UPDATE ON Health_Declaration 
+FOR EACH ROW WHEN (NEW.fever = TRUE) EXECUTE FUNCTION FN_contact_tracing();

@@ -498,3 +498,55 @@ CALL join_meeting(2, 0, CURRENT_DATE + 7, '10:00:00', 205);
 CALL join_meeting(2, 0, CURRENT_DATE + 7, '10:00:00', 304);
 CALL join_meeting(2, 0, CURRENT_DATE + 7, '10:00:00', 305);
 */
+
+-- Contact tracing test cases
+insert into sessions VALUES
+('12:00:00', current_date, 0, 1, 200, 302),
+('12:00:00', current_date + 7, 0, 1, 201, NULL),
+('12:00:00', current_date + 8, 0, 1, 201, 302),
+('12:00:00', current_date + 9, 0, 1, 201, NULL);
+
+insert into joins VALUES
+(100, 0, 1, '12:00:00', current_date),
+(101, 0, 1, '12:00:00', current_date),
+(200, 0, 1, '12:00:00', current_date),
+
+(100, 0, 1, '12:00:00', current_date + 7),
+(100, 0, 1, '12:00:00', current_date + 8),
+(100, 0, 1, '12:00:00', current_date + 9),
+
+(101, 0, 1, '12:00:00', current_date + 7),
+(101, 0, 1, '12:00:00', current_date + 8),
+(101, 0, 1, '12:00:00', current_date + 9),
+
+(201, 0, 1, '12:00:00', current_date + 7),
+(201, 0, 1, '12:00:00', current_date + 8),
+(201, 0, 1, '12:00:00', current_date + 9);
+
+insert into sessions values
+-- past meeting of fever employee 200
+('15:00:00', current_date - 1, 0, 1, 200, 300),
+
+('15:00:00', current_date - 3, 0, 1, 201, 301),
+
+-- different booker than 201, otherwise the meetings will be deleted because
+-- 201 is a close contact of 200
+('15:00:00', current_date + 6, 0, 1, 202, NULL),
+('15:00:00', current_date + 7, 0, 1, 202, 302),
+('15:00:00', current_date + 8, 0, 1, 202, NULL);
+
+insert into joins values
+-- past meeting of fever employee 200
+(200, 0, 1, '15:00:00', current_date - 1),
+
+-- same approved meeting room 3 days ago as fever employee 200
+(201, 0, 1, '15:00:00', current_date - 3),
+(101, 0, 1, '15:00:00', current_date - 3),
+
+(101, 0, 1, '15:00:00', current_date + 6),
+(101, 0, 1, '15:00:00', current_date + 7),
+(101, 0, 1, '15:00:00', current_date + 8),
+
+(202, 0, 1, '15:00:00', current_date + 6),
+(202, 0, 1, '15:00:00', current_date + 7),
+(202, 0, 1, '15:00:00', current_date + 8);
