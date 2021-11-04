@@ -1,6 +1,6 @@
 -- Basic functions
 DROP PROCEDURE IF EXISTS 
-    add_department(TEXT), 
+    add_department(INTEGER, TEXT), 
     remove_department(INTEGER),
     add_room(INTEGER, INTEGER, INTEGER, TEXT, INTEGER),
     change_capacity(INTEGER, INTEGER, INTEGER, DATE, INTEGER),
@@ -25,7 +25,7 @@ CASCADE;
 DROP PROCEDURE IF EXISTS 
     declare_health(INTEGER, DATE, FLOAT(1)),
     remove_employee_from_future_meeting_seven_days(DATE, INTEGER),
-    remove_fever_employee_from_all_meetings(INTEGER)
+    remove_fever_employee_from_all_meetings(DATE, INTEGER)
 CASCADE;
 
 DROP FUNCTION IF EXISTS 
@@ -58,8 +58,8 @@ DROP FUNCTION IF EXISTS
     FN_Updates_OnAdd_CheckSessionValidity(),
     FN_Departments_BeforeDelete_Check(),
     FN_Joins_BeforeInsert_Check(),
-    FN_contact_tracing();
-    FN_Employees_AfterUpdate_EditAffectedMeetings(),
+    FN_contact_tracing(),
+    FN_Employees_AfterUpdate_EditAffectedMeetings();
 
 -- ###########################
 --        Basic Functions
