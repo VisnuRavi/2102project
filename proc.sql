@@ -1,6 +1,6 @@
 -- Basic functions
 DROP PROCEDURE IF EXISTS 
-    add_department(TEXT), 
+    add_department(INTEGER, TEXT), 
     remove_department(INTEGER),
     add_room(INTEGER, INTEGER, INTEGER, TEXT, INTEGER),
     change_capacity(INTEGER, INTEGER, INTEGER, DATE, INTEGER),
@@ -17,7 +17,7 @@ DROP PROCEDURE IF EXISTS
     book_room(INTEGER, INTEGER, DATE, TIME, TIME, INTEGER),
     unbook_room(INTEGER, INTEGER, DATE, TIME, TIME, INTEGER),
     join_meeting(INTEGER, INTEGER, DATE, TIME, INTEGER),
-    leave_meeting(INTEGER, INTEGER, DATE, TIME, INTEGER),
+    leave_meeting(INTEGER, INTEGER, DATE, TIME, TIME, INTEGER),
     approve_meeting(INTEGER, INTEGER, DATE, TIME, INTEGER)
 CASCADE;
 
@@ -25,7 +25,7 @@ CASCADE;
 DROP PROCEDURE IF EXISTS 
     declare_health(INTEGER, DATE, FLOAT(1)),
     remove_employee_from_future_meeting_seven_days(DATE, INTEGER),
-    remove_fever_employee_from_all_meetings(INTEGER)
+    remove_fever_employee_from_all_meetings(DATE, INTEGER)
 CASCADE;
 
 DROP FUNCTION IF EXISTS 
@@ -49,6 +49,8 @@ DROP TRIGGER IF EXISTS TR_Updates_OnAdd_CheckSessionValidity ON Updates;
 DROP TRIGGER IF EXISTS TR_Departments_BeforeDelete_Check ON Departments;
 DROP TRIGGER IF EXISTS TR_Employees_AfterUpdate_EditAffectedMeetings ON Employees;
 DROP TRIGGER IF EXISTS TR_Joins_BeforeInsert_Check ON Joins;
+DROP TRIGGER IF EXISTS TR_Health_Declaration_AfterInsertUpdate_Contact_Tracing ON Health_Declaration;
+DROP TRIGGER IF EXISTS TR_Sessions_BeforeUpdate_Approval_Check() ON Sessions;
 
 -- Trigger Functions
 DROP FUNCTION IF EXISTS
@@ -56,16 +58,18 @@ DROP FUNCTION IF EXISTS
     FN_Sessions_OnDelete_RemoveAllEmps(),
     FN_Updates_OnAdd_CheckSessionValidity(),
     FN_Departments_BeforeDelete_Check(),
-    FN_Employees_AfterUpdate_EditAffectedMeetings();
-    FN_Joins_BeforeInsert_Check();
+    FN_Joins_BeforeInsert_Check(),
+    FN_contact_tracing(),
+    FN_Employees_AfterUpdate_EditAffectedMeetings(),
+    FN_Sessions_BeforeUpdate_Approval_Check();
 
 -- ###########################
 --        Basic Functions
 -- ###########################
 
-CREATE OR REPLACE PROCEDURE add_department(dname TEXT) AS $$
+CREATE OR REPLACE PROCEDURE add_department(did INTEGER, dname TEXT) AS $$
     BEGIN
-        INSERT INTO Departments (dname) VALUES (dname);
+        INSERT INTO Departments (did, dname) VALUES (did, dname);
     END;
 $$ LANGUAGE plpgsql;
 
@@ -75,11 +79,12 @@ CREATE OR REPLACE PROCEDURE remove_department(_did INTEGER) AS $$
     END
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE PROCEDURE add_room(did INTEGER, floor INTEGER, room INTEGER, rname TEXT, capacity INTEGER) AS $$
+CREATE OR REPLACE PROCEDURE add_room(eid INTEGER, did INTEGER, floor INTEGER, room INTEGER, rname TEXT, capacity INTEGER) AS $$
     BEGIN
+        -- check if this eid is a manager. 
         INSERT INTO Meeting_Rooms (did, room, floor, rname) VALUES (did, room, floor, rname);
         -- insert into updates table (non-trigger implementation)
-        INSERT INTO Updates (date, room, floor, new_cap) VALUES (CURRENT_DATE, room, floor, capacity);
+        INSERT INTO Updates (date, room, floor, new_cap, eid) VALUES (CURRENT_DATE, room, floor, capacity, eid);
     END
 $$ LANGUAGE plpgsql;
 
@@ -138,7 +143,7 @@ CREATE OR REPLACE PROCEDURE change_capacity (_floor INTEGER, _room INTEGER, _cap
             
         ELSE
             --add a new entry to updates table, reflecting change in room's capacity
-            INSERT INTO Updates (date,room,floor,new_cap) VALUES (_date, _room, _floor, _cap);
+            INSERT INTO Updates (date,room,floor,new_cap,eid) VALUES (_date, _room, _floor, _cap,_eid);
         END IF;
     END;
 $$ LANGUAGE plpgsql;
@@ -234,7 +239,7 @@ AS $$
 
             IF (room_available > 0) THEN
                 SELECT fever INTO have_fever FROM Health_Declaration WHERE date = CURRENT_DATE AND eid = _booker_eid;
-                --raise notice 'hf %, cd % , ct %', have_fever, CURRENT_DATE, CURRENT_TIME;
+                -- raise notice 'hf %, cd % , ct %', have_fever, CURRENT_DATE, CURRENT_TIME;
                 IF have_fever = TRUE THEN
                     RAISE EXCEPTION 'Employees having a fever cannot book a room';
                 END IF;
@@ -330,47 +335,70 @@ AS $$
     END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE PROCEDURE join_meeting(_floor INTEGER, _room INTEGER, _date DATE, _time TIME, _eid INTEGER) AS $$
+CREATE OR REPLACE PROCEDURE join_meeting(_floor INTEGER, _room INTEGER, _date DATE, _start_hour TIME, _end_hour TIME,
+    _eid INTEGER) AS $$
+DECLARE
+    current_hour_check TIME := _start_hour;
 BEGIN
-    INSERT INTO Joins VALUES (_eid, _room, _floor, _time, _date);
+    while current_hour_check < _end_hour LOOP
+        INSERT INTO Joins VALUES (_eid, _room, _floor, current_hour_check, _date);
+        current_hour_check := current_hour_check + INTERVAL '1 hour';
+    END LOOP;
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE PROCEDURE leave_meeting(_floor INTEGER, _room INTEGER, _date DATE, _time TIME, 
+CREATE OR REPLACE PROCEDURE leave_meeting(_floor INTEGER, _room INTEGER, _date DATE, _start_hour TIME, _end_hour TIME, 
     _eid INTEGER) 
 AS $$
     DECLARE
-        approver_eid INTEGER = NULL;
+        approver_eid INTEGER;
+        booker_eid INTEGER;
+        current_hour_check TIME := _start_hour;
+        current_hour_remove TIME := _start_hour;
     BEGIN
-        SELECT s.approver_eid
-        FROM Sessions s
-        WHERE s.floor = _floor AND
-        s.room = _room AND
-        s.date = _date AND
-        s.time = _time
-        INTO approver_eid;
+        WHILE current_hour_check < _end_hour LOOP
+            SELECT s.approver_eid, s.booker_eid INTO approver_eid, booker_eid
+            FROM Sessions s
+            WHERE s.floor = _floor AND
+            s.room = _room AND
+            s.date = _date AND
+            s.time = current_hour_check;
 
-        -- Ensure employee can only leave unapproved meetings
-        IF approver_eid IS NOT NULL THEN
-            RAISE EXCEPTION 'Meeting already approved'; 
-        END IF;
+            -- Ensure employee can only leave unapproved meetings
+            IF approver_eid IS NOT NULL THEN
+                RAISE EXCEPTION 'Session starting at % already approved, employees may not leave an approved session.', current_hour_check; 
+            END IF;
 
-        DELETE FROM Joins
-        WHERE floor = _floor AND
-        room = _room AND
-        date = _date AND
-        time = _time AND
-        eid = _eid; 
+            -- Ensure booker cannot leave a session they have booked themselves
+            IF booker_eid = _eid THEN
+                RAISE EXCEPTION 'Session starting at % is booked by this employee, employees may not leave a session they have booked themselves.', current_hour_check;
+            END IF;
+
+            current_hour_check := current_hour_check + INTERVAL '1 hour';
+        END LOOP;
+
+        WHILE current_hour_remove < _end_hour LOOP
+            DELETE FROM Joins
+            WHERE floor = _floor AND
+            room = _room AND
+            date = _date AND
+            time = current_hour_remove AND
+            eid = _eid;
+
+            current_hour_remove := current_hour_remove + INTERVAL '1 hour';
+        END LOOP;
     END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE PROCEDURE approve_meeting(_floor INTEGER, _room INTEGER, _date DATE, _time TIME, _eid INTEGER) AS $$
+CREATE OR REPLACE PROCEDURE approve_meeting(_floor INTEGER, _room INTEGER, _date DATE, _start_hour TIME, _end_hour TIME,
+ _eid INTEGER) AS $$
     DECLARE
         room_dept INTEGER = NULL;
         a_eid INTEGER = NULL;
     BEGIN
-        --valid manager_check
-        --prevent past meeting 
+        --valid manager_check.
+        --prevent past meeting.
+        --sessions exists check.
         SELECT did INTO room_dept FROM Meeting_Rooms WHERE floor = _floor AND room = _room;
         IF((SELECT resigned_date FROM Employees WHERE eid = _eid) IS NOT NULL) THEN
             RAISE EXCEPTION 'Attempt by resigned employee to approve room';
@@ -429,18 +457,18 @@ CREATE OR REPLACE FUNCTION contact_tracing(_eid INTEGER, _date DATE) RETURNS TAB
         is_fever BOOLEAN;
         temp_mr RECORD;
         temp_eid RECORD;
+        original_eid RECORD;
     BEGIN
-        SELECT fever FROM Health_Declaration WHERE eid = _eid INTO is_fever;
+        CREATE TEMP TABLE result(eid INTEGER) ON COMMIT DROP;
+        SELECT fever FROM Health_Declaration h WHERE h.eid = _eid INTO is_fever;
 
-        CREATE TABLE result(eid INTEGER);
-
+        -- do nothing and return empty table 
         IF (is_fever = FALSE) THEN
-            RETURN QUERY SELECT eid FROM result;
+            RETURN QUERY SELECT r.eid FROM result r;
         END IF;
 
         -- remove the fever employee from all future meeting room booking, approved or not
-        CALL remove_fever_employee_from_all_meetings(_eid);
-
+        CALL remove_fever_employee_from_all_meetings(_date, _eid);
 
         FOR temp_mr IN 
             -- find all meeting rooms the employee had a meeting in in the past 3 days
@@ -448,17 +476,25 @@ CREATE OR REPLACE FUNCTION contact_tracing(_eid INTEGER, _date DATE) RETURNS TAB
         LOOP    
             -- find all employees that were in the meeting room in the past 3 days
             FOR temp_eid IN
-                SELECT eid FROM three_day_room_employee(temp_mr.room, temp_mr.floor)
+                SELECT tdre.eid FROM three_day_room_employee(temp_mr.floor, temp_mr.room, _date) tdre
             LOOP
                 -- removes the employee from future meeting (both approved and not approved) in the next 7 days
-                CALL remove_employee_from_future_meeting_seven_days(temp_eid.eid);
+                CALL remove_employee_from_future_meeting_seven_days(_date, temp_eid.eid);
                 
                 -- add the eid to our result
                 INSERT INTO result values(temp_eid.eid);
             END LOOP;
         END LOOP;
 
-        RETURN QUERY SELECT DISTINCT eid FROM result ORDER BY eid;
+        -- exclude queried employee as close contact
+        RETURN QUERY 
+            SELECT DISTINCT r.eid 
+            FROM result r
+            EXCEPT 
+            SELECT e.eid
+            FROM employees e
+            WHERE e.eid = _eid
+            ORDER BY eid;
     END;
 $$ LANGUAGE plpgsql;
 
@@ -694,7 +730,8 @@ CREATE OR REPLACE FUNCTION FN_Updates_OnAdd_CheckSessionValidity() RETURNS TRIGG
                     AND
                     NEW.room = j.room
                     AND
-                    j.date >= NEW.date
+                    --check here
+                    j.date > NEW.date
                 GROUP BY j.time, j.date) AS p
             WHERE
                 s.floor = NEW.floor
@@ -775,7 +812,9 @@ BEGIN
         RAISE NOTICE 'Employee % cannot join meeting (room: %, floor: %, time: %, date: %): Employee is already admitted to this meeting', 
                     NEW.eid, NEW.room, NEW.floor, NEW.time, NEW.date;
         RETURN NULL;
-    ELSEIF((SELECT resigned_date FROM Employees WHERE eid = NEW.eid) IS NOT NULL) THEN
+    ELSEIF( ((SELECT resigned_date FROM Employees WHERE eid = NEW.eid) IS NOT NULL) AND 
+            ((SELECT resigned_date FROM Employees WHERE eid = NEW.eid) < NEW.date)
+          ) THEN
         RAISE NOTICE 'Employee % cannot join meeting (room: %, floor: %, time: %, date: %): Employee is resigned', 
                     NEW.eid, NEW.room, NEW.floor, NEW.time, NEW.date;
         RETURN NULL;
@@ -829,6 +868,13 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- Wrapper trigger function that calls contact tracing function
+CREATE OR REPLACE FUNCTION FN_contact_tracing() RETURNS TRIGGER AS $$
+BEGIN
+    PERFORM contact_tracing(NEW.eid, NEW.date);
+    RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION FN_Employees_AfterUpdate_EditAffectedMeetings()
 RETURNS TRIGGER AS $$
@@ -868,6 +914,46 @@ RETURNS TRIGGER AS $$
     END;
 $$ LANGUAGE plpgsql;
 
+CREATE OR REPLACE FUNCTION FN_Updates_BeforeInsert_Check_Manager_Validity()
+RETURNS TRIGGER AS $$
+    DECLARE
+        valid_manager_check INTEGER := 0;
+    BEGIN
+        --still check dept manager = updating manager
+        SELECT COUNT(*) INTO valid_manager_check
+        FROM ((SELECT eid,did FROM Manager NATURAL JOIN Employees) AS me
+             NATURAL JOIN Meeting_Rooms) AS t
+        WHERE
+            t.eid = NEW.eid AND
+            t.room = NEW.room AND
+            t.floor = NEW.floor;
+        
+        IF( ((SELECT resigned_date FROM Employees WHERE eid = NEW.eid) IS NOT NULL) AND 
+            ((SELECT resigned_date FROM Employees WHERE eid = NEW.eid) < NEW.date)
+          ) THEN
+            RAISE NOTICE 'Manager (%) is resigned, cannot add room / change a existing capacity', NEW.eid;
+        --rare case of a manager belonging to 2 departments
+        ELSEIF(valid_manager_check = 0) THEN
+            RAISE NOTICE 'Manager (%) not in same department as Meeting Room (r:%, f:%), cannot add room / change a existing capacity',
+            NEW.eid, NEW.room, NEW.floor;
+        ELSE
+            RETURN NEW;
+        END IF;
+        RETURN NULL;
+    END;
+$$ LANGUAGE plpgsql;
+
+/*
+CREATE OR REPLACE FUNCTION FN_Sessions_BeforeUpdate_Approval_Check()
+RETURNS TRIGGER AS $$
+    DECLARE
+    BEGIN
+        --as manager now takes in _eid no need to check if its manager.
+    END;
+$$ LANGUAGE plpgsql;
+*/
+
+
 -- ########################################################################
 --       Triggers
 -- naming conv for trigger: TR_<TableName>_<ActionName>
@@ -897,3 +983,18 @@ FOR EACH ROW EXECUTE FUNCTION FN_Employees_AfterUpdate_EditAffectedMeetings();
 CREATE TRIGGER TR_Joins_BeforeInsert_Check
 BEFORE INSERT ON Joins
 FOR EACH ROW EXECUTE FUNCTION FN_Joins_BeforeInsert_Check();
+
+CREATE TRIGGER TR_Health_Declaration_AfterInsertUpdate_Contact_Tracing
+AFTER INSERT OR UPDATE ON Health_Declaration 
+FOR EACH ROW WHEN (NEW.fever = TRUE) EXECUTE FUNCTION FN_contact_tracing();
+
+CREATE TRIGGER TR_Updates_BeforeInsert_Check_Manager_Validity
+BEFORE INSERT ON Updates
+FOR EACH ROW EXECUTE FUNCTION FN_Updates_BeforeInsert_Check_Manager_Validity();
+
+
+/*
+CREATE TRIGGER TR_Sessions_BeforeUpdate_Approval_Check
+BEFORE UPDATE ON Sessions
+FOR EACH ROW EXECUTE FN_Sessions_BeforeUpdate_Approval_Check();
+*/
