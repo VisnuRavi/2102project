@@ -81,7 +81,7 @@ $$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE PROCEDURE add_room(eid INTEGER, did INTEGER, floor INTEGER, room INTEGER, rname TEXT, capacity INTEGER) AS $$
     BEGIN
-        -- check if this eid is a manager. 
+        -- TODO: check if this eid is a manager in the same dept as room.
         INSERT INTO Meeting_Rooms (did, room, floor, rname) VALUES (did, room, floor, rname);
         -- insert into updates table (non-trigger implementation)
         INSERT INTO Updates (date, room, floor, new_cap, eid) VALUES (CURRENT_DATE, room, floor, capacity, eid);
@@ -120,31 +120,8 @@ CREATE OR REPLACE PROCEDURE add_employee(ename TEXT, contact_number TEXT, kind K
 $$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE PROCEDURE change_capacity (_floor INTEGER, _room INTEGER, _cap INTEGER, _date DATE, _eid INTEGER) AS $$
-    DECLARE
-        room_dept INTEGER = NULL;
     BEGIN
-        -- get room_dept (did)
-        SELECT did INTO room_dept FROM Meeting_Rooms mr WHERE mr.room = _room AND mr.floor = _floor;
-        
-        -- valid manager
-        IF (_eid NOT IN (SELECT eid FROM Manager)) THEN
-            RAISE EXCEPTION 'Only Managers are allowed to update capacity';
-        ELSEIF (_eid NOT IN (
-            SELECT emps.eid 
-            FROM Employees emps, Manager mngs 
-            WHERE emps.eid = mngs.eid AND emps.did = room_dept)
-        ) THEN
-            RAISE EXCEPTION 'Ensure Manager is from same department as the room';
-        ELSEIF ((SELECT resigned_date 
-                FROM Employees 
-                WHERE eid = _eid) IS NOT NULL
-        ) THEN
-            RAISE EXCEPTION 'Attempt by resigned employee to change capacity!';
-            
-        ELSE
-            --add a new entry to updates table, reflecting change in room's capacity
             INSERT INTO Updates (date,room,floor,new_cap,eid) VALUES (_date, _room, _floor, _cap,_eid);
-        END IF;
     END;
 $$ LANGUAGE plpgsql;
 
@@ -393,42 +370,65 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE PROCEDURE approve_meeting(_floor INTEGER, _room INTEGER, _date DATE, _start_hour TIME, _end_hour TIME,
  _eid INTEGER) AS $$
     DECLARE
+        current_hour_check TIME := _start_hour;
         room_dept INTEGER = NULL;
-        a_eid INTEGER = NULL;
+        approved_check INTEGER;
+        valid_manager_check INTEGER;
     BEGIN
-        --valid manager_check.
-        --prevent past meeting.
-        --sessions exists check.
-        SELECT did INTO room_dept FROM Meeting_Rooms WHERE floor = _floor AND room = _room;
-        IF((SELECT resigned_date FROM Employees WHERE eid = _eid) IS NOT NULL) THEN
-            RAISE EXCEPTION 'Attempt by resigned employee to approve room';
-        ELSEIF (_eid NOT IN (SELECT eid FROM Manager)) THEN
-            RAISE EXCEPTION 'Only Managers are allowed to approve room';
-        ELSEIF (_eid NOT IN (SELECT emps.eid FROM Employees emps, Manager mngs 
-                                WHERE emps.eid = mngs.eid AND emps.did = room_dept)) THEN
-            RAISE EXCEPTION 'Approving Manager needs to be from same department as the to-be-approved room';
-        ELSE
-            SELECT s.approver_eid
+        WHILE current_hour_check < _end_hour LOOP
+            valid_manager_check := 0;
+            approved_check := 0;
+
+            --check whether dept is same
+            SELECT COUNT(*) INTO valid_manager_check
+            FROM ((SELECT eid,did FROM Manager NATURAL JOIN Employees) AS me
+            NATURAL JOIN Meeting_Rooms) AS t
+            WHERE
+                t.eid = _eid AND
+                t.room =  _room AND
+                t.floor = _floor;
+            --check is already approved
+            SELECT COUNT(*) INTO approved_check
             FROM Sessions s
-            WHERE s.floor = _floor AND
+            WHERE
+            s.floor = _floor AND
             s.room = _room AND
             s.date = _date AND
-            s.time = _time
-            INTO a_eid;
-            IF a_eid IS NOT NULL THEN
-                RAISE EXCEPTION 'Meeting already approved'; 
+            s.time = current_hour_check AND
+            s.approver_eid IS NOT NULL;
+            
+            --valid manager
+            IF(valid_manager_check = 0) THEN
+                RAISE EXCEPTION 'Cannot Approve Session: Employee (%) not allowed to approve Session (r:%, f:%; t:%, d:%)', 
+                _eid, _room, _floor, current_hour_check, _date;
+            --check whether approving manager is not resigned
+            ELSEIF( ((SELECT resigned_date FROM Employees WHERE eid = _eid) IS NOT NULL) AND 
+                ((SELECT resigned_date FROM Employees WHERE eid = _eid) < _date)
+            ) THEN
+                RAISE EXCEPTION 'Cannot Approve Session: Manager (%) is resigned, cannot approve Session (r:%, f:%; t:%, d:%)', 
+                _eid, _room, _floor, current_hour_check, _date;
+            --check whether meeting is already approved
+            ELSEIF(approved_check = 1) THEN
+                RAISE EXCEPTION 'Cannot Approve Session: (r:%, f:%; t:%, d:%) is already approved', 
+                _room, _floor, current_hour_check, _date;
+            ELSEIF ((_date < CURRENT_DATE)) THEN
+                RAISE EXCEPTION 'Cannot Approve Session: (r: %, f: %, t: %, d: %) has already passed (date)', 
+                _room, _floor, current_hour_check, _date;
+            ELSEIF((_date = CURRENT_DATE) AND current_hour_check < CURRENT_TIME) THEN
+                RAISE EXCEPTION 'Cannot Approve Session: (r: %, f: %, t: %, d: %) has already passed (time)', 
+                _room, _floor, current_hour_check, _date;
             ELSE
-                --TODO: check date
-                --approve meeting
                 UPDATE Sessions
                 SET approver_eid = _eid
                 WHERE 
                 floor = _floor AND
                 room = _room AND
                 date = _date AND
-                time = _time;
+                time = current_hour_check;
             END IF;
-        END IF;
+
+            current_hour_check := current_hour_check + INTERVAL '1 hour';
+        END LOOP;
     END;
 $$ LANGUAGE plpgsql;
 
@@ -789,37 +789,37 @@ DECLARE
     num_of_changes INTEGER = 0;
 BEGIN
     IF((NEW.date < CURRENT_DATE)) THEN
-        RAISE NOTICE 'Employee % cannot join meeting (room: %, floor: %, time: %, date: %): Please join only future meetings! (date)', 
+        RAISE NOTICE 'Employee % cannot join meeting (r: %, f: %, t: %, d: %): Please join only future meetings! (date)', 
                     NEW.eid, NEW.room, NEW.floor, NEW.time, NEW.date;
         RETURN NULL;
     ELSEIF((NEW.date = CURRENT_DATE) AND NEW.time < CURRENT_TIME) THEN
-        RAISE NOTICE 'Employee % cannot join meeting (room: %, floor: %, time: %, date: %): Please join only future meetings! (time)', 
+        RAISE NOTICE 'Employee % cannot join meeting (r: %, f: %, t: %, d: %): Please join only future meetings! (time)', 
                     NEW.eid, NEW.room, NEW.floor, NEW.time, NEW.date;
         RETURN NULL;
     ELSEIF((SELECT COUNT(*) FROM Sessions WHERE floor = NEW.floor AND room = NEW.room AND date = NEW.date AND time = NEW.time) <> 1) THEN
-        RAISE NOTICE 'Employee % cannot join meeting (room: %, floor: %, time: %, date: %): Invalid Meeting Session Information', 
+        RAISE NOTICE 'Employee % cannot join meeting (r: %, f: %, t: %, d: %): Invalid Meeting Session Information', 
                     NEW.eid, NEW.room, NEW.floor, NEW.time, NEW.date;
         RETURN NULL;
     ELSEIF((SELECT approver_eid FROM Sessions WHERE floor = NEW.floor AND room = NEW.room AND date = NEW.date AND time = NEW.time) IS NOT NULL) THEN
-        RAISE NOTICE 'Employee % cannot join meeting (room: %, floor: %, time: %, date: %): Employees can only join non-approved meetings', 
+        RAISE NOTICE 'Employee % cannot join meeting (r: %, f: %, t: %, d: %): Employees can only join non-approved meetings', 
                     NEW.eid, NEW.room, NEW.floor, NEW.time, NEW.date;
         RETURN NULL;
     ELSEIF((SELECT fever FROM Health_Declaration WHERE date = CURRENT_DATE AND eid = NEW.eid) = TRUE) THEN
-        RAISE NOTICE 'Employee % cannot join meeting (room: %, floor: %, time: %, date: %): Employee is having a fever', 
+        RAISE NOTICE 'Employee % cannot join meeting (r: %, f: %, t: %, d: %): Employee is having a fever', 
                     NEW.eid, NEW.room, NEW.floor, NEW.time, NEW.date;
         RETURN NULL;
     ELSEIF((NEW.eid IN (SELECT eid FROM Joins WHERE room = NEW.room AND NEW.floor = floor AND time = NEW.time AND date = NEW.date)) = TRUE) THEN
-        RAISE NOTICE 'Employee % cannot join meeting (room: %, floor: %, time: %, date: %): Employee is already admitted to this meeting', 
+        RAISE NOTICE 'Employee % cannot join meeting (r: %, f: %, t: %, d: %): Employee is already admitted to this meeting', 
                     NEW.eid, NEW.room, NEW.floor, NEW.time, NEW.date;
         RETURN NULL;
     ELSEIF( ((SELECT resigned_date FROM Employees WHERE eid = NEW.eid) IS NOT NULL) AND 
             ((SELECT resigned_date FROM Employees WHERE eid = NEW.eid) < NEW.date)
           ) THEN
-        RAISE NOTICE 'Employee % cannot join meeting (room: %, floor: %, time: %, date: %): Employee is resigned', 
+        RAISE NOTICE 'Employee % cannot join meeting (r: %, f: %, t: %, d: %): Employee is resigned', 
                     NEW.eid, NEW.room, NEW.floor, NEW.time, NEW.date;
         RETURN NULL;
     ELSEIF ((SELECT employee_concurrent_meeting(NEW.eid, NEW.date, NEW.time, NEW.time + INTERVAL '1 hour')) = TRUE) THEN
-        RAISE NOTICE 'Employee % cannot join meeting (room: %, floor: %, time: %, date: %): Employee is already admitted to concurently timed meeting', 
+        RAISE NOTICE 'Employee % cannot join meeting (r: %, f: %, t: %, d: %): Employee is already admitted to concurently timed meeting', 
                     NEW.eid, NEW.room, NEW.floor, NEW.time, NEW.date;
         RETURN NULL;
     ELSE
@@ -860,7 +860,7 @@ BEGIN
             --add the employee
             RETURN NEW;
         ELSE
-            RAISE NOTICE 'Employee % cannot join meeting (room: %, floor: %, time: %, date: %): Meeting is at full capacity (%)', 
+            RAISE NOTICE 'Employee % cannot join meeting (r: %, f: %, t: %, d: %): Meeting is at full capacity (%)', 
                     NEW.eid, NEW.room, NEW.floor, NEW.time, NEW.date, max_capacity;
             RETURN NULL;
         END IF;
@@ -931,10 +931,11 @@ RETURNS TRIGGER AS $$
         IF( ((SELECT resigned_date FROM Employees WHERE eid = NEW.eid) IS NOT NULL) AND 
             ((SELECT resigned_date FROM Employees WHERE eid = NEW.eid) < NEW.date)
           ) THEN
-            RAISE NOTICE 'Manager (%) is resigned, cannot add room / change a existing capacity', NEW.eid;
+            RAISE NOTICE 'Cannot Add/Change Room Capacity: Manager (%) changing Room`s capacity (r: %, f: %) is resigned', 
+            NEW.eid, NEW.room, NEW.floor;
         --rare case of a manager belonging to 2 departments
         ELSEIF(valid_manager_check = 0) THEN
-            RAISE NOTICE 'Manager (%) not in same department as Meeting Room (r:%, f:%), cannot add room / change a existing capacity',
+            RAISE NOTICE 'Cannot Add/Change Room Capacity: Manager (%) and Room (r: %, f: %) not in same department',
             NEW.eid, NEW.room, NEW.floor;
         ELSE
             RETURN NEW;
@@ -943,15 +944,9 @@ RETURNS TRIGGER AS $$
     END;
 $$ LANGUAGE plpgsql;
 
-/*
-CREATE OR REPLACE FUNCTION FN_Sessions_BeforeUpdate_Approval_Check()
-RETURNS TRIGGER AS $$
-    DECLARE
-    BEGIN
-        --as manager now takes in _eid no need to check if its manager.
-    END;
-$$ LANGUAGE plpgsql;
-*/
+
+
+
 
 
 -- ########################################################################
@@ -991,10 +986,3 @@ FOR EACH ROW WHEN (NEW.fever = TRUE) EXECUTE FUNCTION FN_contact_tracing();
 CREATE TRIGGER TR_Updates_BeforeInsert_Check_Manager_Validity
 BEFORE INSERT ON Updates
 FOR EACH ROW EXECUTE FUNCTION FN_Updates_BeforeInsert_Check_Manager_Validity();
-
-
-/*
-CREATE TRIGGER TR_Sessions_BeforeUpdate_Approval_Check
-BEFORE UPDATE ON Sessions
-FOR EACH ROW EXECUTE FN_Sessions_BeforeUpdate_Approval_Check();
-*/
