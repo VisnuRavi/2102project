@@ -813,7 +813,7 @@ BEGIN
                     NEW.eid, NEW.room, NEW.floor, NEW.time, NEW.date;
         RETURN NULL;
     ELSEIF( ((SELECT resigned_date FROM Employees WHERE eid = NEW.eid) IS NOT NULL) AND 
-            ((SELECT resigned_date FROM Employees WHERE eid = NEW.eid) > NEW.date)
+            ((SELECT resigned_date FROM Employees WHERE eid = NEW.eid) < NEW.date)
           ) THEN
         RAISE NOTICE 'Employee % cannot join meeting (room: %, floor: %, time: %, date: %): Employee is resigned', 
                     NEW.eid, NEW.room, NEW.floor, NEW.time, NEW.date;
@@ -927,13 +927,17 @@ RETURNS TRIGGER AS $$
             t.eid = NEW.eid AND
             t.room = NEW.room AND
             t.floor = NEW.floor;
-
+        
+        IF( ((SELECT resigned_date FROM Employees WHERE eid = NEW.eid) IS NOT NULL) AND 
+            ((SELECT resigned_date FROM Employees WHERE eid = NEW.eid) < NEW.date)
+          ) THEN
+            RAISE NOTICE 'Manager (%) is resigned, cannot add room / change a existing capacity', NEW.eid;
         --rare case of a manager belonging to 2 departments
-        IF(valid_manager_check >= 1) THEN
-            RETURN NEW;
-        ELSE
-            RAISE NOTICE 'Manager (%) not in same department as Meeting Room (r:%, f:%)',
+        ELSEIF(valid_manager_check = 0) THEN
+            RAISE NOTICE 'Manager (%) not in same department as Meeting Room (r:%, f:%), cannot add room / change a existing capacity',
             NEW.eid, NEW.room, NEW.floor;
+        ELSE
+            RETURN NEW;
         END IF;
         RETURN NULL;
     END;
@@ -948,6 +952,7 @@ RETURNS TRIGGER AS $$
     END;
 $$ LANGUAGE plpgsql;
 */
+
 
 -- ########################################################################
 --       Triggers
