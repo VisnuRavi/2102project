@@ -99,8 +99,10 @@ CREATE TABLE Updates (
     room INTEGER,
     floor INTEGER,
     new_cap INTEGER,
+    eid INTEGER,
 
     PRIMARY KEY (date, room, floor),
+    FOREIGN KEY (eid) REFERENCES Manager,
     FOREIGN KEY (room, floor) REFERENCES Meeting_Rooms
 ); 
 

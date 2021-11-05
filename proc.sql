@@ -73,11 +73,12 @@ CREATE OR REPLACE PROCEDURE remove_department(_did INTEGER) AS $$
     END
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE PROCEDURE add_room(did INTEGER, floor INTEGER, room INTEGER, rname TEXT, capacity INTEGER) AS $$
+CREATE OR REPLACE PROCEDURE add_room(eid INTEGER, did INTEGER, floor INTEGER, room INTEGER, rname TEXT, capacity INTEGER) AS $$
     BEGIN
+        -- check if this eid is a manager. 
         INSERT INTO Meeting_Rooms (did, room, floor, rname) VALUES (did, room, floor, rname);
         -- insert into updates table (non-trigger implementation)
-        INSERT INTO Updates (date, room, floor, new_cap) VALUES (CURRENT_DATE, room, floor, capacity);
+        INSERT INTO Updates (date, room, floor, new_cap, eid) VALUES (CURRENT_DATE, room, floor, capacity, eid);
     END
 $$ LANGUAGE plpgsql;
 
@@ -136,7 +137,7 @@ CREATE OR REPLACE PROCEDURE change_capacity (_floor INTEGER, _room INTEGER, _cap
             
         ELSE
             --add a new entry to updates table, reflecting change in room's capacity
-            INSERT INTO Updates (date,room,floor,new_cap) VALUES (_date, _room, _floor, _cap);
+            INSERT INTO Updates (date,room,floor,new_cap,eid) VALUES (_date, _room, _floor, _cap,_eid);
         END IF;
     END;
 $$ LANGUAGE plpgsql;
@@ -367,8 +368,9 @@ CREATE OR REPLACE PROCEDURE approve_meeting(_floor INTEGER, _room INTEGER, _date
         room_dept INTEGER = NULL;
         a_eid INTEGER = NULL;
     BEGIN
-        --valid manager_check
-        --prevent past meeting 
+        --valid manager_check.
+        --prevent past meeting.
+        --sessions exists check.
         SELECT did INTO room_dept FROM Meeting_Rooms WHERE floor = _floor AND room = _room;
         IF((SELECT resigned_date FROM Employees WHERE eid = _eid) IS NOT NULL) THEN
             RAISE EXCEPTION 'Attempt by resigned employee to approve room';
@@ -692,7 +694,8 @@ CREATE OR REPLACE FUNCTION FN_Updates_OnAdd_CheckSessionValidity() RETURNS TRIGG
                     AND
                     NEW.room = j.room
                     AND
-                    j.date >= NEW.date
+                    --check here
+                    j.date > NEW.date
                 GROUP BY j.time, j.date) AS p
             WHERE
                 s.floor = NEW.floor
