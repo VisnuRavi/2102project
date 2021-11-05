@@ -809,7 +809,9 @@ BEGIN
         RAISE NOTICE 'Employee % cannot join meeting (room: %, floor: %, time: %, date: %): Employee is already admitted to this meeting', 
                     NEW.eid, NEW.room, NEW.floor, NEW.time, NEW.date;
         RETURN NULL;
-    ELSEIF((SELECT resigned_date FROM Employees WHERE eid = NEW.eid) IS NOT NULL) THEN
+    ELSEIF( ((SELECT resigned_date FROM Employees WHERE eid = NEW.eid) IS NOT NULL) AND 
+            ((SELECT resigned_date FROM Employees WHERE eid = NEW.eid) > NEW.date)
+          ) THEN
         RAISE NOTICE 'Employee % cannot join meeting (room: %, floor: %, time: %, date: %): Employee is resigned', 
                     NEW.eid, NEW.room, NEW.floor, NEW.time, NEW.date;
         RETURN NULL;
