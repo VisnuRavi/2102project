@@ -24,7 +24,7 @@ CREATE TABLE Departments (
 CREATE TABLE Employees (
     eid SERIAL PRIMARY KEY,
     ename TEXT,
-    email TEXT,
+    email TEXT GENERATED ALWAYS AS (eid::TEXT || '@company.com') STORED,
     did INTEGER,
     resigned_date DATE DEFAULT NULL,
 

@@ -93,14 +93,9 @@ CREATE OR REPLACE PROCEDURE add_employee(ename TEXT, contact_number TEXT, kind K
         created_eid INTEGER;
         created_email TEXT;
     BEGIN
-        -- Temporarily set email to be NULL as we require the auto-generated eid to create email
         INSERT INTO Employees(ename, email, did, resigned_date) 
-        VALUES (ename, NULL, did, NULL) 
+        VALUES (ename, DEFAULT, did, NULL) 
         RETURNING eid INTO created_eid;
-
-        -- Create and set email by concatenating name and eid (guaranteed to be unique)
-        created_email = CONCAT(created_eid::TEXT, '@company.com');
-        UPDATE Employees SET email = created_email WHERE eid = created_eid;
 
         -- Insert contact number into separate table (since an employee can have multiple)
         INSERT INTO Contact_Numbers values(created_eid, contact_number);
