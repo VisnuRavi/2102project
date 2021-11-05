@@ -333,9 +333,15 @@ AS $$
     END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE PROCEDURE join_meeting(_floor INTEGER, _room INTEGER, _date DATE, _time TIME, _eid INTEGER) AS $$
+CREATE OR REPLACE PROCEDURE join_meeting(_floor INTEGER, _room INTEGER, _date DATE, _start_hour TIME, _end_hour TIME,
+    _eid INTEGER) AS $$
+DECLARE
+    current_hour_check TIME := _start_hour;
 BEGIN
-    INSERT INTO Joins VALUES (_eid, _room, _floor, _time, _date);
+    while current_hour_check < _end_hour LOOP
+        INSERT INTO Joins VALUES (_eid, _room, _floor, current_hour_check, _date);
+        current_hour_check := current_hour_check + INTERVAL '1 hour';
+    END LOOP;
 END;
 $$ LANGUAGE plpgsql;
 
