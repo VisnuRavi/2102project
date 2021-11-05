@@ -12,36 +12,36 @@ INSERT INTO Employees VALUES
 (101, 'name_j_101', 'name_j_101@mail.com', 900, NULL),
 (200, 'name_s_200', 'name_s_200@mail.com', 900, NULL),
 (201, 'name_s_201', 'name_s_201@mail.com', 900, NULL),
-(300, 'name_m_300', 'name_m_300@mail.com', 900, NULL),
-(301, 'name_m_301', 'name_m_301@mail.com', 900, CURRENT_DATE),
+(300, 'name_m_300', 'name_m_300@mail.com', 900, CURRENT_DATE - 1),
+(301, 'name_m_301', 'name_m_301@mail.com', 900, CURRENT_DATE + 1),
 
 (102, 'name_j_102', 'name_j_102@mail.com', 901, NULL),
 (103, 'name_j_103', 'name_j_103@mail.com', 901, NULL),
 (202, 'name_s_202', 'name_s_202@mail.com', 901, NULL),
 (203, 'name_s_203', 'name_s_203@mail.com', 901, NULL),
 (302, 'name_m_302', 'name_m_302@mail.com', 901, NULL),
-(303, 'name_m_303', 'name_m_303@mail.com', 901, CURRENT_DATE),
+(303, 'name_m_303', 'name_m_303@mail.com', 901, CURRENT_DATE + 1),
 
 (104, 'name_j_104', 'name_j_104@mail.com', 902, NULL),
 (105, 'name_j_105', 'name_j_105@mail.com', 902, NULL),
 (204, 'name_s_204', 'name_s_204@mail.com', 902, NULL),
 (205, 'name_s_205', 'name_s_205@mail.com', 902, NULL),
 (304, 'name_m_304', 'name_m_304@mail.com', 902, NULL),
-(305, 'name_m_305', 'name_m_305@mail.com', 902, CURRENT_DATE),
+(305, 'name_m_305', 'name_m_305@mail.com', 902, CURRENT_DATE + 1),
 
 (106, 'name_j_106', 'name_j_106@mail.com', 903, NULL),
 (107, 'name_j_107', 'name_j_107@mail.com', 903, NULL),
 (206, 'name_s_206', 'name_s_206@mail.com', 903, NULL),
 (207, 'name_s_207', 'name_s_207@mail.com', 903, NULL),
 (306, 'name_m_306', 'name_m_306@mail.com', 903, NULL),
-(307, 'name_m_307', 'name_m_307@mail.com', 903, CURRENT_DATE),
+(307, 'name_m_307', 'name_m_307@mail.com', 903, CURRENT_DATE + 1),
 
 (108, 'name_j_108', 'name_j_108@mail.com', 904, NULL),
 (109, 'name_j_109', 'name_j_109@mail.com', 904, NULL),
 (208, 'name_s_208', 'name_s_208@mail.com', 904, NULL),
 (209, 'name_s_209', 'name_s_209@mail.com', 904, NULL),
 (308, 'name_m_308', 'name_m_308@mail.com', 904, NULL),
-(309, 'name_m_309', 'name_m_309@mail.com', 904, CURRENT_DATE);
+(309, 'name_m_309', 'name_m_309@mail.com', 904, CURRENT_DATE + 1);
 
 INSERT INTO Health_Declaration (date, eid, temp) VALUES
 (CURRENT_DATE,100, 37.6),
@@ -180,23 +180,27 @@ INSERT INTO Meeting_Rooms VALUES
 (904, 1, 4, 'smallroom');
 
 INSERT INTO Updates Values
-(CURRENT_DATE, 0, 0, 2),
-(CURRENT_DATE, 1, 0, 2),
-(CURRENT_DATE, 0, 1, 2),
-(CURRENT_DATE, 1, 1, 2),
-(CURRENT_DATE, 0, 2, 2),
-(CURRENT_DATE, 1, 2, 2),
-(CURRENT_DATE, 0, 3, 2),
-(CURRENT_DATE, 1, 3, 2),
-(CURRENT_DATE, 0, 4, 2),
-(CURRENT_DATE, 1, 4, 2),
+(CURRENT_DATE, 0, 0, 2, 300), --INVALID (resigned)
+(CURRENT_DATE, 0, 0, 2, 301),
+(CURRENT_DATE, 1, 0, 2, 301),
+(CURRENT_DATE, 0, 1, 2, 302),
+(CURRENT_DATE, 1, 1, 2, 303),
+(CURRENT_DATE, 0, 2, 2, 303), --INVALID
+(CURRENT_DATE, 0, 2, 2, 304),
+(CURRENT_DATE, 1, 2, 2, 305),
+(CURRENT_DATE, 0, 3, 2, 306),
+(CURRENT_DATE, 1, 3, 2, 307),
+(CURRENT_DATE, 0, 4, 2, 308),
+(CURRENT_DATE, 1, 4, 2, 309),
 
-(CURRENT_DATE + 3, 1, 4, 3),
-(CURRENT_DATE + 6, 1, 4, 4);
+(CURRENT_DATE + 3, 1, 4, 3, 309),
+(CURRENT_DATE + 6, 1, 4, 4, 309);
 
 
 INSERT INTO Sessions VALUES
 ('20:00:00', CURRENT_DATE, 0, 0, 200,NULL), --non approve
+('20:00:00', CURRENT_DATE + 1, 0, 0, 200,NULL), --resignation test_1
+('20:00:00', CURRENT_DATE + 2, 0, 0, 200,NULL), --resignation test_2
 ('20:00:00', CURRENT_DATE, 1, 0, 201,NULL),  --approve
 ('20:00:00', CURRENT_DATE, 1, 1, 202,NULL),  --concurrent session
 
@@ -210,6 +214,8 @@ INSERT INTO Sessions VALUES
 --admit booker
 INSERT INTO Joins VALUES
 (200, 0, 0, '20:00:00', CURRENT_DATE),
+(200, 0, 0, '20:00:00', CURRENT_DATE + 1),
+(200, 0, 0, '20:00:00', CURRENT_DATE + 2),
 (201, 1, 0, '20:00:00', CURRENT_DATE),
 (202, 1, 1, '20:00:00', CURRENT_DATE),
 
@@ -231,7 +237,7 @@ INSERT INTO Joins VALUES
 --invalid meeting session (valid employee, invalid meeting)
 (101,10,0,'20:00:00', CURRENT_DATE),
 --past time and date (valid employee, invalid meeting)
-(101,0,0,'20:00:00', CURRENT_DATE - 1),
+(101,0,0,'20:00:00', CURRENT_DATE - 10),
 (101,0,0, CURRENT_TIME - INTERVAL '1 hour', CURRENT_DATE),
 --approved meeting (valid employee, invalid meeting)
 (101,1,0,'20:00:00', CURRENT_DATE),
@@ -240,7 +246,9 @@ INSERT INTO Joins VALUES
 --past admission(invalid employee (booker), valid meeting)
 (200,0,0, '20:00:00', CURRENT_DATE),
 --resignation (invalid employee, valid meeting)
-(301,0,0, '20:00:00', CURRENT_DATE),
+(301,0,0, '20:00:00', CURRENT_DATE), --valid
+(301,0,0, '20:00:00', CURRENT_DATE + 1), --valid
+(301,0,0, '20:00:00', CURRENT_DATE + 2), --invalid
 --concurrent meeting (invalid employee (booker of another meeting), valid session)
 (202,0,0, '20:00:00', CURRENT_DATE);
 

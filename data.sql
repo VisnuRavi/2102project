@@ -14,82 +14,82 @@ INSERT INTO Departments VALUES
 INSERT INTO Employees VALUES
 --eid format: junior-> 1xx, senior->2xx, manager-><3xx
 --ename format: name_<type>_<eid>
---email format: <ename>@mail.com
+--email format: <eid>@company.com
 --did: each department has 2 juniors, 2 seniors, 2 managers
 --resign_date: default null
 
-(100, 'name_j_100', 'name_j_100@mail.com', 900, NULL),
-(101, 'name_j_101', 'name_j_101@mail.com', 900, NULL),
-(200, 'name_s_200', 'name_s_200@mail.com', 900, NULL),
-(201, 'name_s_201', 'name_s_201@mail.com', 900, NULL),
-(300, 'name_m_300', 'name_m_300@mail.com', 900, NULL),
-(301, 'name_m_301', 'name_m_301@mail.com', 900, NULL),
+(100, 'name_j_100', '100@company.com', 900, NULL),
+(101, 'name_j_101', '101@company.com', 900, NULL),
+(200, 'name_s_200', '200@company.com', 900, NULL),
+(201, 'name_s_201', '201@company.com', 900, NULL),
+(300, 'name_m_300', '300@company.com', 900, NULL),
+(301, 'name_m_301', '301@company.com', 900, NULL),
 
-(102, 'name_j_102', 'name_j_102@mail.com', 901, NULL),
-(103, 'name_j_103', 'name_j_103@mail.com', 901, NULL),
-(202, 'name_s_202', 'name_s_202@mail.com', 901, NULL),
-(203, 'name_s_203', 'name_s_203@mail.com', 901, NULL),
-(302, 'name_m_302', 'name_m_302@mail.com', 901, NULL),
-(303, 'name_m_303', 'name_m_303@mail.com', 901, NULL),
+(102, 'name_j_102', '102@company.com', 901, NULL),
+(103, 'name_j_103', '103@company.com', 901, NULL),
+(202, 'name_s_202', '202@company.com', 901, NULL),
+(203, 'name_s_203', '203@company.com', 901, NULL),
+(302, 'name_m_302', '302@company.com', 901, NULL),
+(303, 'name_m_303', '303@company.com', 901, NULL),
 
-(104, 'name_j_104', 'name_j_104@mail.com', 902, NULL),
-(105, 'name_j_105', 'name_j_105@mail.com', 902, NULL),
-(204, 'name_s_204', 'name_s_204@mail.com', 902, NULL),
-(205, 'name_s_205', 'name_s_205@mail.com', 902, NULL),
-(304, 'name_m_304', 'name_m_304@mail.com', 902, NULL),
-(305, 'name_m_305', 'name_m_305@mail.com', 902, NULL),
+(104, 'name_j_104', '104@company.com', 902, NULL),
+(105, 'name_j_105', '105@company.com', 902, NULL),
+(204, 'name_s_204', '204@company.com', 902, NULL),
+(205, 'name_s_205', '205@company.com', 902, NULL),
+(304, 'name_m_304', '304@company.com', 902, NULL),
+(305, 'name_m_305', '305@company.com', 902, NULL),
 
-(106, 'name_j_106', 'name_j_106@mail.com', 903, NULL),
-(107, 'name_j_107', 'name_j_107@mail.com', 903, NULL),
-(206, 'name_s_206', 'name_s_206@mail.com', 903, NULL),
-(207, 'name_s_207', 'name_s_207@mail.com', 903, NULL),
-(306, 'name_m_306', 'name_m_306@mail.com', 903, NULL),
-(307, 'name_m_307', 'name_m_307@mail.com', 903, NULL),
+(106, 'name_j_106', '106@company.com', 903, NULL),
+(107, 'name_j_107', '107@company.com', 903, NULL),
+(206, 'name_s_206', '206@company.com', 903, NULL),
+(207, 'name_s_207', '207@company.com', 903, NULL),
+(306, 'name_m_306', '306@company.com', 903, NULL),
+(307, 'name_m_307', '307@company.com', 903, NULL),
 
-(108, 'name_j_108', 'name_j_108@mail.com', 904, NULL),
-(109, 'name_j_109', 'name_j_109@mail.com', 904, NULL),
-(208, 'name_s_208', 'name_s_208@mail.com', 904, NULL),
-(209, 'name_s_209', 'name_s_209@mail.com', 904, NULL),
-(308, 'name_m_308', 'name_m_308@mail.com', 904, NULL),
-(309, 'name_m_309', 'name_m_309@mail.com', 904, NULL);
+(108, 'name_j_108', '108@company.com', 904, NULL),
+(109, 'name_j_109', '109@company.com', 904, NULL),
+(208, 'name_s_208', '208@company.com', 904, NULL),
+(209, 'name_s_209', '209@company.com', 904, NULL),
+(308, 'name_m_308', '308@company.com', 904, NULL),
+(309, 'name_m_309', '309@company.com', 904, NULL);
 
 /*
 debugging: #83 #80 #68
 INSERT INTO Employees VALUES
-(100, 'name_j_100', 'name_j_100@mail.com', 900, NULL),
-(101, 'name_j_101', 'name_j_101@mail.com', 900, NULL),
-(200, 'name_s_200', 'name_s_200@mail.com', 900, NULL),
-(201, 'name_s_201', 'name_s_201@mail.com', 900, NULL),
-(300, 'name_m_300', 'name_m_300@mail.com', 900, NULL),
-(301, 'name_m_301', 'name_m_301@mail.com', 900, CURRENT_DATE),
+(100, 'name_j_100', '100@mail.com', 900, NULL),
+(101, 'name_j_101', '101@mail.com', 900, NULL),
+(200, 'name_s_200', '200@mail.com', 900, NULL),
+(201, 'name_s_201', '201@mail.com', 900, NULL),
+(300, 'name_m_300', '300@mail.com', 900, NULL),
+(301, 'name_m_301', '301@mail.com', 900, CURRENT_DATE),
 
-(102, 'name_j_102', 'name_j_102@mail.com', 901, NULL),
-(103, 'name_j_103', 'name_j_103@mail.com', 901, NULL),
-(202, 'name_s_202', 'name_s_202@mail.com', 901, NULL),
-(203, 'name_s_203', 'name_s_203@mail.com', 901, NULL),
-(302, 'name_m_302', 'name_m_302@mail.com', 901, NULL),
-(303, 'name_m_303', 'name_m_303@mail.com', 901, CURRENT_DATE),
+(102, 'name_j_102', '102@company.com', 901, NULL),
+(103, 'name_j_103', '103@company.com', 901, NULL),
+(202, 'name_s_202', '202@company.com', 901, NULL),
+(203, 'name_s_203', '203@company.com', 901, NULL),
+(302, 'name_m_302', '302@company.com', 901, NULL),
+(303, 'name_m_303', '303@company.com', 901, CURRENT_DATE),
 
-(104, 'name_j_104', 'name_j_104@mail.com', 902, NULL),
-(105, 'name_j_105', 'name_j_105@mail.com', 902, NULL),
-(204, 'name_s_204', 'name_s_204@mail.com', 902, NULL),
-(205, 'name_s_205', 'name_s_205@mail.com', 902, NULL),
-(304, 'name_m_304', 'name_m_304@mail.com', 902, NULL),
-(305, 'name_m_305', 'name_m_305@mail.com', 902, CURRENT_DATE),
+(104, 'name_j_104', '104@company.com', 902, NULL),
+(105, 'name_j_105', '105@company.com', 902, NULL),
+(204, 'name_s_204', '204@company.com', 902, NULL),
+(205, 'name_s_205', '205@company.com', 902, NULL),
+(304, 'name_m_304', '304@company.com', 902, NULL),
+(305, 'name_m_305', '305@company.com', 902, CURRENT_DATE),
 
-(106, 'name_j_106', 'name_j_106@mail.com', 903, NULL),
-(107, 'name_j_107', 'name_j_107@mail.com', 903, NULL),
-(206, 'name_s_206', 'name_s_206@mail.com', 903, NULL),
-(207, 'name_s_207', 'name_s_207@mail.com', 903, NULL),
-(306, 'name_m_306', 'name_m_306@mail.com', 903, NULL),
-(307, 'name_m_307', 'name_m_307@mail.com', 903, CURRENT_DATE),
+(106, 'name_j_106', '106@company.com', 903, NULL),
+(107, 'name_j_107', '107@company.com', 903, NULL),
+(206, 'name_s_206', '206@company.com', 903, NULL),
+(207, 'name_s_207', '207@company.com', 903, NULL),
+(306, 'name_m_306', '306@company.com', 903, NULL),
+(307, 'name_m_307', '307@company.com', 903, CURRENT_DATE),
 
-(108, 'name_j_108', 'name_j_108@mail.com', 904, NULL),
-(109, 'name_j_109', 'name_j_109@mail.com', 904, NULL),
-(208, 'name_s_208', 'name_s_208@mail.com', 904, NULL),
-(209, 'name_s_209', 'name_s_209@mail.com', 904, NULL),
-(308, 'name_m_308', 'name_m_308@mail.com', 904, NULL),
-(309, 'name_m_309', 'name_m_309@mail.com', 904, CURRENT_DATE);
+(108, 'name_j_108', '108@company.com', 904, NULL),
+(109, 'name_j_109', '109@company.com', 904, NULL),
+(208, 'name_s_208', '208@company.com', 904, NULL),
+(209, 'name_s_209', '209@company.com', 904, NULL),
+(308, 'name_m_308', '308@company.com', 904, NULL),
+(309, 'name_m_309', '309@company.com', 904, CURRENT_DATE);
 
 */
 
@@ -317,16 +317,16 @@ INSERT INTO Meeting_Rooms VALUES
 
 --capacity added via updates table
 INSERT INTO Updates Values
-(CURRENT_DATE, 0, 0, 6),
-(CURRENT_DATE, 1, 0, 6),
-(CURRENT_DATE, 0, 1, 6),
-(CURRENT_DATE, 1, 1, 6),
-(CURRENT_DATE, 0, 2, 6),
-(CURRENT_DATE, 1, 2, 6),
-(CURRENT_DATE, 0, 3, 6),
-(CURRENT_DATE, 1, 3, 6),
-(CURRENT_DATE, 0, 4, 6),
-(CURRENT_DATE, 1, 4, 6);
+(CURRENT_DATE, 0, 0, 6, 300),
+(CURRENT_DATE, 1, 0, 6, 301),
+(CURRENT_DATE, 0, 1, 6, 302),
+(CURRENT_DATE, 1, 1, 6, 303),
+(CURRENT_DATE, 0, 2, 6, 304),
+(CURRENT_DATE, 1, 2, 6, 305),
+(CURRENT_DATE, 0, 3, 6, 306),
+(CURRENT_DATE, 1, 3, 6, 307),
+(CURRENT_DATE, 0, 4, 6, 308),
+(CURRENT_DATE, 1, 4, 6, 309);
 /*debugging: #81
 INSERT INTO Updates VALUES
 (CURRENT_DATE, 1, 11, 10);
@@ -381,28 +381,28 @@ CALL change_capacity(2, 0, 2, CURRENT_DATE + 1, 304);
 --booker id -> senior
 --approver_id = NULL
 INSERT INTO Sessions VALUES
-('10:00:00', CURRENT_DATE, 0, 0, 200,NULL),
-('10:00:00', CURRENT_DATE + 7, 0, 0, 200,NULL),
-('10:00:00', CURRENT_DATE, 0, 1, 202,NULL),
-('10:00:00', CURRENT_DATE + 7, 0, 1, 202,NULL),
-('10:00:00', CURRENT_DATE, 0, 2, 204,NULL),
-('10:00:00', CURRENT_DATE + 7, 0, 2, 204,NULL),
-('10:00:00', CURRENT_DATE, 0, 3, 206,NULL),
-('10:00:00', CURRENT_DATE + 7, 0, 3, 206,NULL);
+('23:59:00', CURRENT_DATE, 0, 0, 200,NULL),
+('23:59:00', CURRENT_DATE + 7, 0, 0, 200,NULL),
+('23:59:00', CURRENT_DATE, 0, 1, 202,NULL),
+('23:59:00', CURRENT_DATE + 7, 0, 1, 202,NULL),
+('23:59:00', CURRENT_DATE, 0, 2, 204,NULL),
+('23:59:00', CURRENT_DATE + 7, 0, 2, 204,NULL),
+('23:59:00', CURRENT_DATE, 0, 3, 206,NULL),
+('23:59:00', CURRENT_DATE + 7, 0, 3, 206,NULL);
 /*debugging: #81
 INSERT INTO Sessions VALUES
-('10:00:00', CURRENT_DATE, 1, 11, 206,NULL),
-('10:00:00', '2021-11-03', 1, 11, 206,NULL),
-('10:00:00', '2021-11-04', 1, 11, 206,NULL);
+('23:59:00', CURRENT_DATE, 1, 11, 206,NULL),
+('23:59:00', '2021-11-03', 1, 11, 206,NULL),
+('23:59:00', '2021-11-04', 1, 11, 206,NULL);
 */
 
 
 /*
 --test for capacity change
 INSERT INTO Sessions VALUES
-('10:00:00', CURRENT_DATE + 6, 0, 0, 200,NULL),
-('10:00:00', CURRENT_DATE + 7, 0, 0, 200,NULL),
-('10:00:00', CURRENT_DATE + 8, 0, 0, 200,NULL);
+('23:59:00', CURRENT_DATE + 6, 0, 0, 200,NULL),
+('23:59:00', CURRENT_DATE + 7, 0, 0, 200,NULL),
+('23:59:00', CURRENT_DATE + 8, 0, 0, 200,NULL);
 */
 
 
@@ -410,91 +410,143 @@ INSERT INTO Sessions VALUES
 
 --booker already inside for that session
 INSERT INTO Joins VALUES
-(200, 0, 0, '10:00:00', CURRENT_DATE),
-(200, 0, 0, '10:00:00', CURRENT_DATE + 7),
-(202, 0, 1, '10:00:00', CURRENT_DATE),
-(202, 0, 1, '10:00:00', CURRENT_DATE + 7),
-(204, 0, 2, '10:00:00', CURRENT_DATE),
-(204, 0, 2, '10:00:00', CURRENT_DATE + 7),
-(206, 0, 3, '10:00:00', CURRENT_DATE),
-(206, 0, 3, '10:00:00', CURRENT_DATE + 7);
+(200, 0, 0, '23:59:00', CURRENT_DATE),
+(200, 0, 0, '23:59:00', CURRENT_DATE + 7),
+(202, 0, 1, '23:59:00', CURRENT_DATE),
+(202, 0, 1, '23:59:00', CURRENT_DATE + 7),
+(204, 0, 2, '23:59:00', CURRENT_DATE),
+(204, 0, 2, '23:59:00', CURRENT_DATE + 7),
+(206, 0, 3, '23:59:00', CURRENT_DATE),
+(206, 0, 3, '23:59:00', CURRENT_DATE + 7);
 /*debugging: #81
 --booker
 INSERT INTO Joins VALUES
-(206, 1, 11, '10:00:00', CURRENT_DATE),
-(206, 1, 11, '10:00:00', '2021-11-03'),
-(206, 1, 11, '10:00:00', '2021-11-04');
+(206, 1, 11, '23:59:00', CURRENT_DATE),
+(206, 1, 11, '23:59:00', '2021-11-03'),
+(206, 1, 11, '23:59:00', '2021-11-04');
 --session 1: 9 more pax allowed in
-CALL join_meeting(11,1, CURRENT_DATE, '10:00:00', 100);
-CALL join_meeting(11,1, CURRENT_DATE, '10:00:00', 101);
-CALL join_meeting(11,1, CURRENT_DATE, '10:00:00', 102);
-CALL join_meeting(11,1, CURRENT_DATE, '10:00:00', 103);
-CALL join_meeting(11,1, CURRENT_DATE, '10:00:00', 104);
-CALL join_meeting(11,1, CURRENT_DATE, '10:00:00', 105);
-CALL join_meeting(11,1, CURRENT_DATE, '10:00:00', 106);
-CALL join_meeting(11,1, CURRENT_DATE, '10:00:00', 107);
-CALL join_meeting(11,1, CURRENT_DATE, '10:00:00', 108);
+CALL join_meeting(11,1, CURRENT_DATE, '23:59:00', 100);
+CALL join_meeting(11,1, CURRENT_DATE, '23:59:00', 101);
+CALL join_meeting(11,1, CURRENT_DATE, '23:59:00', 102);
+CALL join_meeting(11,1, CURRENT_DATE, '23:59:00', 103);
+CALL join_meeting(11,1, CURRENT_DATE, '23:59:00', 104);
+CALL join_meeting(11,1, CURRENT_DATE, '23:59:00', 105);
+CALL join_meeting(11,1, CURRENT_DATE, '23:59:00', 106);
+CALL join_meeting(11,1, CURRENT_DATE, '23:59:00', 107);
+CALL join_meeting(11,1, CURRENT_DATE, '23:59:00', 108);
 --session 2: 1 more pax allowed in
-CALL join_meeting(11,1,'2021-11-03' , '10:00:00', 100);
+CALL join_meeting(11,1,'2021-11-03' , '23:59:00', 100);
 --session 3: 2 more pax allowed in
-CALL join_meeting(11,1,'2021-11-04' , '10:00:00', 100);
-CALL join_meeting(11,1,'2021-11-04' , '10:00:00', 101);
+CALL join_meeting(11,1,'2021-11-04' , '23:59:00', 100);
+CALL join_meeting(11,1,'2021-11-04' , '23:59:00', 101);
 */
 
 /*
 --test booker (should throw error)
-CALL join_meeting(0, 0, CURRENT_DATE, '10:00:00', 200);
+CALL join_meeting(0, 0, CURRENT_DATE, '23:59:00', 200);
 
 
 --employees (except booker) from each dept try to join meeting 1 (cap: 6) and meeting 2 (cap: 2)
-CALL join_meeting(0, 0, CURRENT_DATE, '10:00:00', 100);
-CALL join_meeting(0, 0, CURRENT_DATE, '10:00:00', 101);
-CALL join_meeting(0, 0, CURRENT_DATE, '10:00:00', 201);
-CALL join_meeting(0, 0, CURRENT_DATE, '10:00:00', 300);
-CALL join_meeting(0, 0, CURRENT_DATE, '10:00:00', 301);
+CALL join_meeting(0, 0, CURRENT_DATE, '23:59:00', 100);
+CALL join_meeting(0, 0, CURRENT_DATE, '23:59:00', 101);
+CALL join_meeting(0, 0, CURRENT_DATE, '23:59:00', 201);
+CALL join_meeting(0, 0, CURRENT_DATE, '23:59:00', 300);
+CALL join_meeting(0, 0, CURRENT_DATE, '23:59:00', 301);
 
 
-CALL join_meeting(0, 0, CURRENT_DATE + 7, '10:00:00', 100);
-CALL join_meeting(0, 0, CURRENT_DATE + 7, '10:00:00', 101);
-CALL join_meeting(0, 0, CURRENT_DATE + 7, '10:00:00', 201);
-CALL join_meeting(0, 0, CURRENT_DATE + 7, '10:00:00', 300);
-CALL join_meeting(0, 0, CURRENT_DATE + 7, '10:00:00', 301);
+CALL join_meeting(0, 0, CURRENT_DATE + 7, '23:59:00', 100);
+CALL join_meeting(0, 0, CURRENT_DATE + 7, '23:59:00', 101);
+CALL join_meeting(0, 0, CURRENT_DATE + 7, '23:59:00', 201);
+CALL join_meeting(0, 0, CURRENT_DATE + 7, '23:59:00', 300);
+CALL join_meeting(0, 0, CURRENT_DATE + 7, '23:59:00', 301);
 */
 
 
 /*
 --test for capacity change
-CALL join_meeting(0, 0, CURRENT_DATE, '10:00:00', 100);
-CALL join_meeting(0, 0, CURRENT_DATE, '10:00:00', 101);
-CALL join_meeting(0, 0, CURRENT_DATE, '10:00:00', 201);
-CALL join_meeting(0, 0, CURRENT_DATE, '10:00:00', 300);
-CALL join_meeting(0, 0, CURRENT_DATE, '10:00:00', 301);
-CALL join_meeting(0, 0, CURRENT_DATE + 7, '10:00:00', 100);
-CALL join_meeting(0, 0, CURRENT_DATE + 7, '10:00:00', 101);
-CALL join_meeting(0, 0, CURRENT_DATE + 7, '10:00:00', 201);
-CALL join_meeting(0, 0, CURRENT_DATE + 7, '10:00:00', 300);
-CALL join_meeting(0, 0, CURRENT_DATE + 7, '10:00:00', 301);
+CALL join_meeting(0, 0, CURRENT_DATE, '23:59:00', 100);
+CALL join_meeting(0, 0, CURRENT_DATE, '23:59:00', 101);
+CALL join_meeting(0, 0, CURRENT_DATE, '23:59:00', 201);
+CALL join_meeting(0, 0, CURRENT_DATE, '23:59:00', 300);
+CALL join_meeting(0, 0, CURRENT_DATE, '23:59:00', 301);
+CALL join_meeting(0, 0, CURRENT_DATE + 7, '23:59:00', 100);
+CALL join_meeting(0, 0, CURRENT_DATE + 7, '23:59:00', 101);
+CALL join_meeting(0, 0, CURRENT_DATE + 7, '23:59:00', 201);
+CALL join_meeting(0, 0, CURRENT_DATE + 7, '23:59:00', 300);
+CALL join_meeting(0, 0, CURRENT_DATE + 7, '23:59:00', 301);
 
 
-CALL join_meeting(1, 0, CURRENT_DATE, '10:00:00', 102);
-CALL join_meeting(1, 0, CURRENT_DATE, '10:00:00', 103);
-CALL join_meeting(1, 0, CURRENT_DATE, '10:00:00', 203);
-CALL join_meeting(1, 0, CURRENT_DATE, '10:00:00', 302);
-CALL join_meeting(1, 0, CURRENT_DATE, '10:00:00', 303);
-CALL join_meeting(1, 0, CURRENT_DATE + 7, '10:00:00', 102);
-CALL join_meeting(1, 0, CURRENT_DATE + 7, '10:00:00', 103);
-CALL join_meeting(1, 0, CURRENT_DATE + 7, '10:00:00', 203);
-CALL join_meeting(1, 0, CURRENT_DATE + 7, '10:00:00', 302);
-CALL join_meeting(1, 0, CURRENT_DATE + 7, '10:00:00', 303);
+CALL join_meeting(1, 0, CURRENT_DATE, '23:59:00', 102);
+CALL join_meeting(1, 0, CURRENT_DATE, '23:59:00', 103);
+CALL join_meeting(1, 0, CURRENT_DATE, '23:59:00', 203);
+CALL join_meeting(1, 0, CURRENT_DATE, '23:59:00', 302);
+CALL join_meeting(1, 0, CURRENT_DATE, '23:59:00', 303);
+CALL join_meeting(1, 0, CURRENT_DATE + 7, '23:59:00', 102);
+CALL join_meeting(1, 0, CURRENT_DATE + 7, '23:59:00', 103);
+CALL join_meeting(1, 0, CURRENT_DATE + 7, '23:59:00', 203);
+CALL join_meeting(1, 0, CURRENT_DATE + 7, '23:59:00', 302);
+CALL join_meeting(1, 0, CURRENT_DATE + 7, '23:59:00', 303);
 
-CALL join_meeting(2, 0, CURRENT_DATE, '10:00:00', 104);
-CALL join_meeting(2, 0, CURRENT_DATE, '10:00:00', 105);
-CALL join_meeting(2, 0, CURRENT_DATE, '10:00:00', 205);
-CALL join_meeting(2, 0, CURRENT_DATE, '10:00:00', 304);
-CALL join_meeting(2, 0, CURRENT_DATE, '10:00:00', 305);
-CALL join_meeting(2, 0, CURRENT_DATE + 7, '10:00:00', 104);
-CALL join_meeting(2, 0, CURRENT_DATE + 7, '10:00:00', 105);
-CALL join_meeting(2, 0, CURRENT_DATE + 7, '10:00:00', 205);
-CALL join_meeting(2, 0, CURRENT_DATE + 7, '10:00:00', 304);
-CALL join_meeting(2, 0, CURRENT_DATE + 7, '10:00:00', 305);
+CALL join_meeting(2, 0, CURRENT_DATE, '23:59:00', 104);
+CALL join_meeting(2, 0, CURRENT_DATE, '23:59:00', 105);
+CALL join_meeting(2, 0, CURRENT_DATE, '23:59:00', 205);
+CALL join_meeting(2, 0, CURRENT_DATE, '23:59:00', 304);
+CALL join_meeting(2, 0, CURRENT_DATE, '23:59:00', 305);
+CALL join_meeting(2, 0, CURRENT_DATE + 7, '23:59:00', 104);
+CALL join_meeting(2, 0, CURRENT_DATE + 7, '23:59:00', 105);
+CALL join_meeting(2, 0, CURRENT_DATE + 7, '23:59:00', 205);
+CALL join_meeting(2, 0, CURRENT_DATE + 7, '23:59:00', 304);
+CALL join_meeting(2, 0, CURRENT_DATE + 7, '23:59:00', 305);
 */
+
+-- Contact tracing test cases
+insert into sessions VALUES
+('12:00:00', current_date, 0, 1, 200, 302),
+('12:00:00', current_date + 7, 0, 1, 201, NULL),
+('12:00:00', current_date + 8, 0, 1, 201, 302),
+('12:00:00', current_date + 9, 0, 1, 201, NULL);
+
+insert into joins VALUES
+(100, 0, 1, '12:00:00', current_date),
+(101, 0, 1, '12:00:00', current_date),
+(200, 0, 1, '12:00:00', current_date),
+
+(100, 0, 1, '12:00:00', current_date + 7),
+(100, 0, 1, '12:00:00', current_date + 8),
+(100, 0, 1, '12:00:00', current_date + 9),
+
+(101, 0, 1, '12:00:00', current_date + 7),
+(101, 0, 1, '12:00:00', current_date + 8),
+(101, 0, 1, '12:00:00', current_date + 9),
+
+(201, 0, 1, '12:00:00', current_date + 7),
+(201, 0, 1, '12:00:00', current_date + 8),
+(201, 0, 1, '12:00:00', current_date + 9);
+
+insert into sessions values
+-- past meeting of fever employee 200
+('15:00:00', current_date - 1, 0, 1, 200, 300),
+
+('15:00:00', current_date - 3, 0, 1, 201, 301),
+
+-- different booker than 201, otherwise the meetings will be deleted because
+-- 201 is a close contact of 200
+('15:00:00', current_date + 6, 0, 1, 202, NULL),
+('15:00:00', current_date + 7, 0, 1, 202, 302),
+('15:00:00', current_date + 8, 0, 1, 202, NULL);
+
+insert into joins values
+-- past meeting of fever employee 200
+(200, 0, 1, '15:00:00', current_date - 1),
+
+-- same approved meeting room 3 days ago as fever employee 200
+(201, 0, 1, '15:00:00', current_date - 3),
+(101, 0, 1, '15:00:00', current_date - 3),
+
+(101, 0, 1, '15:00:00', current_date + 6),
+(101, 0, 1, '15:00:00', current_date + 7),
+(101, 0, 1, '15:00:00', current_date + 8),
+
+(202, 0, 1, '15:00:00', current_date + 6),
+(202, 0, 1, '15:00:00', current_date + 7),
+(202, 0, 1, '15:00:00', current_date + 8);

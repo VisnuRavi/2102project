@@ -16,7 +16,7 @@ CREATE TYPE KIND AS ENUM ('Junior', 'Senior', 'Manager');
 -- ##################
 
 CREATE TABLE Departments (
-    did SERIAL PRIMARY KEY,
+    did INTEGER PRIMARY KEY,
     dname TEXT
 ); 
 
@@ -99,8 +99,10 @@ CREATE TABLE Updates (
     room INTEGER,
     floor INTEGER,
     new_cap INTEGER,
+    eid INTEGER,
 
     PRIMARY KEY (date, room, floor),
+    FOREIGN KEY (eid) REFERENCES Manager,
     FOREIGN KEY (room, floor) REFERENCES Meeting_Rooms
 ); 
 
@@ -127,6 +129,7 @@ CREATE TABLE Joins (
     time TIME,
     date DATE,
     
+    PRIMARY KEY (eid, room, floor, time, date),
     FOREIGN KEY (time, date, room, floor) REFERENCES Sessions,
     FOREIGN KEY (eid) REFERENCES Employees
 );
