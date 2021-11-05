@@ -50,6 +50,7 @@ DROP TRIGGER IF EXISTS TR_Departments_BeforeDelete_Check ON Departments;
 DROP TRIGGER IF EXISTS TR_Employees_AfterUpdate_EditAffectedMeetings ON Employees;
 DROP TRIGGER IF EXISTS TR_Joins_BeforeInsert_Check ON Joins;
 DROP TRIGGER IF EXISTS TR_Health_Declaration_AfterInsertUpdate_Contact_Tracing ON Health_Declaration;
+DROP TRIGGER IF EXISTS TR_Sessions_BeforeUpdate_Approval_Check() ON Sessions;
 
 -- Trigger Functions
 DROP FUNCTION IF EXISTS
@@ -59,7 +60,8 @@ DROP FUNCTION IF EXISTS
     FN_Departments_BeforeDelete_Check(),
     FN_Joins_BeforeInsert_Check(),
     FN_contact_tracing(),
-    FN_Employees_AfterUpdate_EditAffectedMeetings();
+    FN_Employees_AfterUpdate_EditAffectedMeetings(),
+    FN_Sessions_BeforeUpdate_Approval_Check();
 
 -- ###########################
 --        Basic Functions
@@ -388,7 +390,8 @@ AS $$
     END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE PROCEDURE approve_meeting(_floor INTEGER, _room INTEGER, _date DATE, _time TIME, _eid INTEGER) AS $$
+CREATE OR REPLACE PROCEDURE approve_meeting(_floor INTEGER, _room INTEGER, _date DATE, _start_hour TIME, _end_hour TIME,
+ _eid INTEGER) AS $$
     DECLARE
         room_dept INTEGER = NULL;
         a_eid INTEGER = NULL;
@@ -911,6 +914,41 @@ RETURNS TRIGGER AS $$
     END;
 $$ LANGUAGE plpgsql;
 
+CREATE OR REPLACE FUNCTION FN_Updates_BeforeInsert_Check_Manager_Validity()
+RETURNS TRIGGER AS $$
+    DECLARE
+        valid_manager_check INTEGER := 0;
+    BEGIN
+        --still check dept manager = updating manager
+        SELECT COUNT(*) INTO valid_manager_check
+        FROM ((SELECT eid,did FROM Manager NATURAL JOIN Employees) AS me
+             NATURAL JOIN Meeting_Rooms) AS t
+        WHERE
+            t.eid = NEW.eid AND
+            t.room = NEW.room AND
+            t.floor = NEW.floor;
+
+        --rare case of a manager belonging to 2 departments
+        IF(valid_manager_check >= 1) THEN
+            RETURN NEW;
+        ELSE
+            RAISE NOTICE 'Manager (%) not in same department as Meeting Room (r:%, f:%)',
+            NEW.eid, NEW.room, NEW.floor;
+        END IF;
+        RETURN NULL;
+    END;
+$$ LANGUAGE plpgsql;
+
+/*
+CREATE OR REPLACE FUNCTION FN_Sessions_BeforeUpdate_Approval_Check()
+RETURNS TRIGGER AS $$
+    DECLARE
+    BEGIN
+        --as manager now takes in _eid no need to check if its manager.
+    END;
+$$ LANGUAGE plpgsql;
+*/
+
 -- ########################################################################
 --       Triggers
 -- naming conv for trigger: TR_<TableName>_<ActionName>
@@ -944,3 +982,14 @@ FOR EACH ROW EXECUTE FUNCTION FN_Joins_BeforeInsert_Check();
 CREATE TRIGGER TR_Health_Declaration_AfterInsertUpdate_Contact_Tracing
 AFTER INSERT OR UPDATE ON Health_Declaration 
 FOR EACH ROW WHEN (NEW.fever = TRUE) EXECUTE FUNCTION FN_contact_tracing();
+
+CREATE TRIGGER TR_Updates_BeforeInsert_Check_Manager_Validity
+BEFORE INSERT ON Updates
+FOR EACH ROW EXECUTE FUNCTION FN_Updates_BeforeInsert_Check_Manager_Validity();
+
+
+/*
+CREATE TRIGGER TR_Sessions_BeforeUpdate_Approval_Check
+BEFORE UPDATE ON Sessions
+FOR EACH ROW EXECUTE FN_Sessions_BeforeUpdate_Approval_Check();
+*/
