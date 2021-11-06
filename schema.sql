@@ -130,6 +130,6 @@ CREATE TABLE Joins (
     date DATE,
     
     PRIMARY KEY (eid, room, floor, time, date),
-    FOREIGN KEY (time, date, room, floor) REFERENCES Sessions,
+    FOREIGN KEY (time, date, room, floor) REFERENCES Sessions ON DELETE CASCADE,
     FOREIGN KEY (eid) REFERENCES Employees
 );
