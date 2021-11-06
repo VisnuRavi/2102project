@@ -585,12 +585,12 @@ CREATE OR REPLACE FUNCTION non_compliance(start_date DATE, end_date DATE) RETURN
         END IF;
 
         RETURN QUERY
-        SELECT hd.eid, CAST((end_date - start_date + 1) - COUNT(*) AS INTEGER)
-        FROM Health_Declaration hd
-        WHERE hd.date >= start_date AND hd.date <= end_date
-        GROUP BY hd.eid
-        HAVING CAST((end_date - start_date + 1) - COUNT(*) AS INTEGER) > 0
-        ORDER BY CAST((end_date - start_date + 1) - COUNT(*) AS INTEGER) DESC, hd.eid;
+        SELECT e.eid, CAST((end_date - start_date + 1) - COUNT(hd.date) AS INTEGER)
+        FROM Employees e LEFT OUTER JOIN Health_Declaration hd ON e.eid = hd.eid
+        WHERE (hd.date IS NULL) OR (hd.date >= start_date AND hd.date <= end_date)
+        GROUP BY e.eid
+        HAVING CAST((end_date - start_date + 1) - COUNT(hd.date) AS INTEGER) > 0
+        ORDER BY CAST((end_date - start_date + 1) - COUNT(hd.date) AS INTEGER) DESC, e.eid;
     END;
 $$ LANGUAGE plpgsql;
 
