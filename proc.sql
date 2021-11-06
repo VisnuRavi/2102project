@@ -44,19 +44,16 @@ CASCADE;
 
 -- Trigger, seems to only work when done individually
 DROP TRIGGER IF EXISTS TR_Contact_Numbers_Check_Max ON Contact_Numbers;
-DROP TRIGGER IF EXISTS TR_Sessions_OnDelete_RemoveAllEmps ON Sessions;
 DROP TRIGGER IF EXISTS TR_Updates_OnAdd_CheckSessionValidity ON Updates;
 DROP TRIGGER IF EXISTS TR_Departments_BeforeDelete_Check ON Departments;
 DROP TRIGGER IF EXISTS TR_Employees_AfterUpdate_EditAffectedMeetings ON Employees;
 DROP TRIGGER IF EXISTS TR_Joins_BeforeInsert_Check ON Joins;
 DROP TRIGGER IF EXISTS TR_Health_Declaration_AfterInsertUpdate_Contact_Tracing ON Health_Declaration;
--- DROP TRIGGER IF EXISTS TR_Sessions_BeforeUpdate_Approval_Check ON Sessions;
 DROP TRIGGER IF EXISTS TR_Updates_BeforeInsert_Check_Manager_Validity ON Updates;
 
 -- Trigger Functions
 DROP FUNCTION IF EXISTS
     FN_Contact_Numbers_Check_Max(),
-    FN_Sessions_OnDelete_RemoveAllEmps(),
     FN_Updates_OnAdd_CheckSessionValidity(),
     FN_Departments_BeforeDelete_Check(),
     FN_Joins_BeforeInsert_Check(),
@@ -300,13 +297,6 @@ AS $$
             AND s.room = _room 
             AND s.floor = _floor 
             AND s.booker_eid = _booker_eid;
-
-            -- Remove all employees associated with the session
-            DELETE FROM Joins j
-            WHERE j.floor = _floor AND
-            j.room = _room AND
-            j.date = _date AND
-            j.time = current_hour_remove;
 
             current_hour_remove := current_hour_remove + INTERVAL '1 hour';
         END LOOP;
@@ -709,24 +699,6 @@ CREATE OR REPLACE FUNCTION FN_Contact_Numbers_Check_Max() RETURNS TRIGGER AS $$
     END;
 $$ LANGUAGE plpgsql;
 
---on deletion of a session, remove all employees attending it (regardless of approval status)
-CREATE OR REPLACE FUNCTION FN_Sessions_OnDelete_RemoveAllEmps() RETURNS TRIGGER AS $$
-    BEGIN
-        DELETE FROM Joins
-        WHERE
-            OLD.time = time
-            AND
-            OLD.date = date
-            AND
-            OLD.room = room
-            AND
-            OLD.floor = floor;
-
-        RAISE NOTICE 'session on %, %, room: %, floor: %, has been deleted',OLD.date, OLD.time, OLD.room, OLD.floor;
-        RETURN OLD;
-    END;
-$$ LANGUAGE plpgsql;
-
 --on adding on a updates entry, check validity of all rooms pertaining to the entry, delete them if invalid
 CREATE OR REPLACE FUNCTION FN_Updates_OnAdd_CheckSessionValidity() RETURNS TRIGGER AS $$
     BEGIN
@@ -920,12 +892,11 @@ RETURNS TRIGGER AS $$
                 DELETE FROM Sessions
                 WHERE booker_eid = NEW.eid
                 AND date > NEW.resigned_date;
-
             END IF;
                 
-                DELETE from Joins 
-                WHERE eid = NEW.eid 
-                AND date > NEW.resigned_date;
+            DELETE from Joins 
+            WHERE eid = NEW.eid 
+            AND date > NEW.resigned_date;
 
         END IF;
         RETURN NULL;
@@ -976,10 +947,6 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER TR_Contact_Numbers_Check_Max
 BEFORE INSERT ON Contact_Numbers
 FOR EACH ROW EXECUTE FUNCTION FN_Contact_Numbers_Check_Max(); 
-
-CREATE TRIGGER TR_Sessions_OnDelete_RemoveAllEmps
-BEFORE DELETE ON Sessions
-FOR EACH ROW EXECUTE FUNCTION FN_Sessions_OnDelete_RemoveAllEmps();
 
 CREATE TRIGGER TR_Updates_OnAdd_CheckSessionValidity
 AFTER INSERT ON Updates
