@@ -2,7 +2,7 @@
 DROP PROCEDURE IF EXISTS 
     add_department(INTEGER, TEXT), 
     remove_department(INTEGER),
-    add_room(INTEGER, INTEGER, INTEGER, TEXT, INTEGER),
+    add_room(INTEGER, INTEGER, INTEGER, INTEGER, TEXT, INTEGER),
     change_capacity(INTEGER, INTEGER, INTEGER, DATE, INTEGER),
     add_employee(TEXT, TEXT, KIND, INTEGER),
     remove_employee(INTEGER, DATE) 
@@ -16,9 +16,9 @@ CASCADE;
 DROP PROCEDURE IF EXISTS 
     book_room(INTEGER, INTEGER, DATE, TIME, TIME, INTEGER),
     unbook_room(INTEGER, INTEGER, DATE, TIME, TIME, INTEGER),
-    join_meeting(INTEGER, INTEGER, DATE, TIME, INTEGER),
+    join_meeting(INTEGER, INTEGER, DATE, TIME, TIME, INTEGER),
     leave_meeting(INTEGER, INTEGER, DATE, TIME, TIME, INTEGER),
-    approve_meeting(INTEGER, INTEGER, DATE, TIME, INTEGER)
+    approve_meeting(INTEGER, INTEGER, DATE, TIME, TIME, INTEGER)
 CASCADE;
 
 -- Health functions
@@ -50,7 +50,8 @@ DROP TRIGGER IF EXISTS TR_Departments_BeforeDelete_Check ON Departments;
 DROP TRIGGER IF EXISTS TR_Employees_AfterUpdate_EditAffectedMeetings ON Employees;
 DROP TRIGGER IF EXISTS TR_Joins_BeforeInsert_Check ON Joins;
 DROP TRIGGER IF EXISTS TR_Health_Declaration_AfterInsertUpdate_Contact_Tracing ON Health_Declaration;
-DROP TRIGGER IF EXISTS TR_Sessions_BeforeUpdate_Approval_Check() ON Sessions;
+-- DROP TRIGGER IF EXISTS TR_Sessions_BeforeUpdate_Approval_Check ON Sessions;
+DROP TRIGGER IF EXISTS TR_Updates_BeforeInsert_Check_Manager_Validity ON Updates;
 
 -- Trigger Functions
 DROP FUNCTION IF EXISTS
@@ -61,7 +62,8 @@ DROP FUNCTION IF EXISTS
     FN_Joins_BeforeInsert_Check(),
     FN_contact_tracing(),
     FN_Employees_AfterUpdate_EditAffectedMeetings(),
-    FN_Sessions_BeforeUpdate_Approval_Check();
+    -- FN_Sessions_BeforeUpdate_Approval_Check(),
+    FN_Updates_BeforeInsert_Check_Manager_Validity;
 
 -- ###########################
 --        Basic Functions
