@@ -25,7 +25,7 @@ CREATE TABLE Employees (
     eid SERIAL PRIMARY KEY,
     ename TEXT NOT NULL,
     email TEXT GENERATED ALWAYS AS (eid::TEXT || '@company.com') STORED,
-    did INTEGER,
+    did INTEGER CHECK ( NOT (did IS NULL AND resigned_date IS NULL)),
     resigned_date DATE DEFAULT NULL,
 
     FOREIGN KEY (did) REFERENCES Departments
@@ -98,7 +98,7 @@ CREATE TABLE Updates (
     date DATE,
     room INTEGER,
     floor INTEGER,
-    new_cap INTEGER,
+    new_cap INTEGER CHECK (new_cap >= 0),
     eid INTEGER,
 
     PRIMARY KEY (date, room, floor),
