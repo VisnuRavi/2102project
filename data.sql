@@ -8,7 +8,13 @@ INSERT INTO Departments VALUES
 (901,'dept901'),
 (902,'dept902'),
 (903,'dept903'),
-(904,'dept904');
+(904,'dept904'),
+(905,'dept905'),
+(906,'dept906'),
+(907,'dept907'),
+(908,'dept908'),
+(909,'dept909'),
+(910,'dept910');
 
 --employees
 INSERT INTO Employees (eid, ename, did, resigned_date) VALUES
