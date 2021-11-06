@@ -776,6 +776,7 @@ CREATE OR REPLACE FUNCTION FN_Departments_BeforeDelete_Check() RETURNS TRIGGER A
         RAISE NOTICE 'There are still meeting rooms associated with this department';
         RETURN NULL;
     END IF;
+    RETURN OLD;
     END;
 $$ LANGUAGE plpgsql;
 
