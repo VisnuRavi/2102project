@@ -763,7 +763,7 @@ CREATE OR REPLACE FUNCTION FN_Departments_BeforeDelete_Check() RETURNS TRIGGER A
     BEGIN
     SELECT COUNT(*) INTO has_employees
     FROM Employees e
-    WHERE e.did = OLD.did;
+    WHERE e.did = OLD.did AND e.resigned_date IS NULL;
     IF has_employees > 0 THEN
         RAISE NOTICE 'There are still employees in this department that have yet to be transferred or removed';
         RETURN NULL;
