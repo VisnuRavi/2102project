@@ -17,13 +17,13 @@ CREATE TYPE KIND AS ENUM ('Junior', 'Senior', 'Manager');
 
 CREATE TABLE Departments (
     did INTEGER PRIMARY KEY,
-    dname TEXT
+    dname TEXT NOT NULL
 ); 
 
 
 CREATE TABLE Employees (
     eid SERIAL PRIMARY KEY,
-    ename TEXT,
+    ename TEXT NOT NULL,
     email TEXT GENERATED ALWAYS AS (eid::TEXT || '@company.com') STORED,
     did INTEGER,
     resigned_date DATE DEFAULT NULL,
