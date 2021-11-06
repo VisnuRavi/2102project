@@ -273,12 +273,17 @@ AS $$
             END IF;
 
             SELECT s.booker_eid INTO is_booker
-            FROM Sessions s
+            FROM Sessions s INNER JOIN Employees e
+            ON
+                e.eid = s.booker_eid
             WHERE s.floor = _floor AND
             s.room = _room AND
             s.date = _date AND
             s.time = current_hour_check AND
-            s.booker_eid = _booker_eid; -- Ensure only booker of the session can unbook
+            s.booker_eid = _booker_eid AND
+            e.resigned_date IS NOT NULL; -- Ensure only booker of the session can unbook
+
+
 
             IF (is_booker) IS NULL THEN
                 RAISE EXCEPTION 'Only the booker of the session can unbook';
@@ -330,6 +335,10 @@ AS $$
         current_hour_check TIME := _start_hour;
         current_hour_remove TIME := _start_hour;
     BEGIN
+        IF _start_hour >= _end_hour THEN
+            RAISE EXCEPTION 'Start hour should be earlier than end hour';
+        END IF;
+
         WHILE current_hour_check < _end_hour LOOP
             SELECT s.approver_eid, s.booker_eid INTO approver_eid, booker_eid
             FROM Sessions s
@@ -372,6 +381,10 @@ CREATE OR REPLACE PROCEDURE approve_meeting(_floor INTEGER, _room INTEGER, _date
         approved_check INTEGER;
         valid_manager_check INTEGER;
     BEGIN
+        IF _start_hour >= _end_hour THEN
+            RAISE EXCEPTION 'Start hour should be earlier than end hour';
+        END IF;
+        
         WHILE current_hour_check < _end_hour LOOP
             valid_manager_check := 0;
             approved_check := 0;
