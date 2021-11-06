@@ -12,7 +12,7 @@ INSERT INTO Employees VALUES
 (101, 'name_j_101', 'name_j_101@mail.com', 900, NULL),
 (200, 'name_s_200', 'name_s_200@mail.com', 900, NULL),
 (201, 'name_s_201', 'name_s_201@mail.com', 900, NULL),
-(300, 'name_m_300', 'name_m_300@mail.com', 900, CURRENT_DATE - 1),
+(300, 'name_m_300', 'name_m_300@mail.com', 900, NULL),
 (301, 'name_m_301', 'name_m_301@mail.com', 900, CURRENT_DATE + 1),
 
 (102, 'name_j_102', 'name_j_102@mail.com', 901, NULL),
@@ -41,7 +41,7 @@ INSERT INTO Employees VALUES
 (208, 'name_s_208', 'name_s_208@mail.com', 904, NULL),
 (209, 'name_s_209', 'name_s_209@mail.com', 904, NULL),
 (308, 'name_m_308', 'name_m_308@mail.com', 904, NULL),
-(309, 'name_m_309', 'name_m_309@mail.com', 904, CURRENT_DATE + 1);
+(309, 'name_m_309', 'name_m_309@mail.com', 904, NULL;
 
 INSERT INTO Health_Declaration (date, eid, temp) VALUES
 (CURRENT_DATE,100, 37.6),
@@ -180,12 +180,10 @@ INSERT INTO Meeting_Rooms VALUES
 (904, 1, 4, 'smallroom');
 
 INSERT INTO Updates Values
-(CURRENT_DATE, 0, 0, 2, 300), --INVALID (resigned)
-(CURRENT_DATE, 0, 0, 2, 301),
+(CURRENT_DATE, 0, 0, 2, 300),
 (CURRENT_DATE, 1, 0, 2, 301),
 (CURRENT_DATE, 0, 1, 2, 302),
 (CURRENT_DATE, 1, 1, 2, 303),
-(CURRENT_DATE, 0, 2, 2, 303), --INVALID
 (CURRENT_DATE, 0, 2, 2, 304),
 (CURRENT_DATE, 1, 2, 2, 305),
 (CURRENT_DATE, 0, 3, 2, 306),
@@ -198,96 +196,96 @@ INSERT INTO Updates Values
 
 
 INSERT INTO Sessions VALUES
-('20:00:00', CURRENT_DATE, 0, 0, 200,NULL), --non approve
-('20:00:00', CURRENT_DATE + 1, 0, 0, 200,NULL), --resignation test_1
-('20:00:00', CURRENT_DATE + 2, 0, 0, 200,NULL), --resignation test_2
-('20:00:00', CURRENT_DATE, 1, 0, 201,NULL),  --approve
-('20:00:00', CURRENT_DATE, 1, 1, 202,NULL),  --concurrent session
+('22:00:00', CURRENT_DATE, 0, 0, 200,NULL), --non approve
+('22:00:00', CURRENT_DATE + 1, 0, 0, 200,NULL), --resignation test_1
+('22:00:00', CURRENT_DATE + 2, 0, 0, 200,NULL), --resignation test_2
+('22:00:00', CURRENT_DATE, 1, 0, 201,NULL),  --approve
+('22:00:00', CURRENT_DATE, 1, 1, 202,NULL),  --concurrent session
 
-('20:00:00', CURRENT_DATE, 1, 4, 208,NULL), --session on initialisation_change_date (2pax)
-('20:00:00', CURRENT_DATE + 2, 1, 4, 208,NULL), --session right before 1st_change_date (2pax)
-('20:00:00', CURRENT_DATE + 3, 1, 4, 208,NULL), --session ON 1st_change_date (2pax)
-('20:00:00', CURRENT_DATE + 4, 1, 4, 208,NULL), --session AFTER 1st_change_date (3pax)
-('20:00:00', CURRENT_DATE + 6, 1, 4, 208,NULL), --session ON 2nd_change_date (3pax)
-('20:00:00', CURRENT_DATE + 7, 1, 4, 208,NULL); --session AFTER 2nd_change_date (4pax)
+('22:00:00', CURRENT_DATE, 1, 4, 208,NULL), --session on initialisation_change_date (2pax)
+('22:00:00', CURRENT_DATE + 2, 1, 4, 208,NULL), --session right before 1st_change_date (2pax)
+('22:00:00', CURRENT_DATE + 3, 1, 4, 208,NULL), --session ON 1st_change_date (2pax)
+('22:00:00', CURRENT_DATE + 4, 1, 4, 208,NULL), --session AFTER 1st_change_date (3pax)
+('22:00:00', CURRENT_DATE + 6, 1, 4, 208,NULL), --session ON 2nd_change_date (3pax)
+('22:00:00', CURRENT_DATE + 7, 1, 4, 208,NULL); --session AFTER 2nd_change_date (4pax)
 
 --admit booker
 INSERT INTO Joins VALUES
-(200, 0, 0, '20:00:00', CURRENT_DATE),
-(200, 0, 0, '20:00:00', CURRENT_DATE + 1),
-(200, 0, 0, '20:00:00', CURRENT_DATE + 2),
-(201, 1, 0, '20:00:00', CURRENT_DATE),
-(202, 1, 1, '20:00:00', CURRENT_DATE),
+(200, 0, 0, '22:00:00', CURRENT_DATE),
+(200, 0, 0, '22:00:00', CURRENT_DATE + 1),
+(200, 0, 0, '22:00:00', CURRENT_DATE + 2),
+(201, 1, 0, '22:00:00', CURRENT_DATE),
+(202, 1, 1, '22:00:00', CURRENT_DATE),
 
-(208, 1, 4, '20:00:00', CURRENT_DATE),
-(208, 1, 4, '20:00:00', CURRENT_DATE + 2),
-(208, 1, 4, '20:00:00', CURRENT_DATE + 3),
-(208, 1, 4, '20:00:00', CURRENT_DATE + 4),
-(208, 1, 4, '20:00:00', CURRENT_DATE + 6),
-(208, 1, 4, '20:00:00', CURRENT_DATE + 7);
+(208, 1, 4, '22:00:00', CURRENT_DATE),
+(208, 1, 4, '22:00:00', CURRENT_DATE + 2),
+(208, 1, 4, '22:00:00', CURRENT_DATE + 3),
+(208, 1, 4, '22:00:00', CURRENT_DATE + 4),
+(208, 1, 4, '22:00:00', CURRENT_DATE + 6),
+(208, 1, 4, '22:00:00', CURRENT_DATE + 7);
 
 
 
 --approve the approved case
-CALL approve_meeting(0,1, CURRENT_DATE, '20:00:00', 300);
+CALL approve_meeting(0,1, CURRENT_DATE, '22:00:00', 300);
 
 
 --testing start (ALL SHOULD THROW NOTICE)
 INSERT INTO Joins VALUES
 --invalid meeting session (valid employee, invalid meeting)
-(101,10,0,'20:00:00', CURRENT_DATE),
+(101,10,0,'22:00:00', CURRENT_DATE),
 --past time and date (valid employee, invalid meeting)
-(101,0,0,'20:00:00', CURRENT_DATE - 10),
+(101,0,0,'22:00:00', CURRENT_DATE - 10),
 (101,0,0, CURRENT_TIME - INTERVAL '1 hour', CURRENT_DATE),
 --approved meeting (valid employee, invalid meeting)
-(101,1,0,'20:00:00', CURRENT_DATE),
+(101,1,0,'22:00:00', CURRENT_DATE),
 --fever employee(invalid employee, valid meeting)
-(100,0,0, '20:00:00', CURRENT_DATE),
+(100,0,0, '22:00:00', CURRENT_DATE),
 --past admission(invalid employee (booker), valid meeting)
-(200,0,0, '20:00:00', CURRENT_DATE),
+(200,0,0, '22:00:00', CURRENT_DATE),
 --resignation (invalid employee, valid meeting)
-(301,0,0, '20:00:00', CURRENT_DATE), --valid
-(301,0,0, '20:00:00', CURRENT_DATE + 1), --valid
-(301,0,0, '20:00:00', CURRENT_DATE + 2), --invalid
+(301,0,0, '22:00:00', CURRENT_DATE), --valid
+(301,0,0, '22:00:00', CURRENT_DATE + 1), --valid
+(301,0,0, '22:00:00', CURRENT_DATE + 2), --invalid
 --concurrent meeting (invalid employee (booker of another meeting), valid session)
-(202,0,0, '20:00:00', CURRENT_DATE);
+(202,0,0, '22:00:00', CURRENT_DATE);
 
 
 --testing for capacity allowance
 
 --test 1 (1 more pax)
 INSERT INTO Joins VALUES
-(101, 1, 4, '20:00:00', CURRENT_DATE),
-(103, 1, 4, '20:00:00', CURRENT_DATE); --throw notice
+(101, 1, 4, '22:00:00', CURRENT_DATE),
+(103, 1, 4, '22:00:00', CURRENT_DATE); --throw notice
 
 --test 2 (1 more pax)
 INSERT INTO Joins VALUES
-(101, 1, 4, '20:00:00', CURRENT_DATE + 2),
-(103, 1, 4, '20:00:00', CURRENT_DATE + 2); --throw notice
+(101, 1, 4, '22:00:00', CURRENT_DATE + 2),
+(103, 1, 4, '22:00:00', CURRENT_DATE + 2); --throw notice
 
 --test 3 (1 more pax)
 INSERT INTO Joins VALUES
-(101, 1, 4, '20:00:00', CURRENT_DATE + 3),
-(103, 1, 4, '20:00:00', CURRENT_DATE + 3); --throw notice
+(101, 1, 4, '22:00:00', CURRENT_DATE + 3),
+(103, 1, 4, '22:00:00', CURRENT_DATE + 3); --throw notice
 
 --test 4 (2 more pax)
 INSERT INTO Joins VALUES
-(101, 1, 4, '20:00:00', CURRENT_DATE + 4),
-(103, 1, 4, '20:00:00', CURRENT_DATE + 4),
-(105, 1, 4, '20:00:00', CURRENT_DATE + 4); --throw notice
+(101, 1, 4, '22:00:00', CURRENT_DATE + 4),
+(103, 1, 4, '22:00:00', CURRENT_DATE + 4),
+(105, 1, 4, '22:00:00', CURRENT_DATE + 4); --throw notice
 
 --test 5 (2 more pax)
 INSERT INTO Joins VALUES
-(101, 1, 4, '20:00:00', CURRENT_DATE + 6),
-(103, 1, 4, '20:00:00', CURRENT_DATE + 6),
-(105, 1, 4, '20:00:00', CURRENT_DATE + 6); --throw notice
+(101, 1, 4, '22:00:00', CURRENT_DATE + 6),
+(103, 1, 4, '22:00:00', CURRENT_DATE + 6),
+(105, 1, 4, '22:00:00', CURRENT_DATE + 6); --throw notice
 
 --test 6 (3 more pax)
 INSERT INTO Joins VALUES
-(101, 1, 4, '20:00:00', CURRENT_DATE + 7),
-(103, 1, 4, '20:00:00', CURRENT_DATE + 7),
-(105, 1, 4, '20:00:00', CURRENT_DATE + 7),
-(107, 1, 4, '20:00:00', CURRENT_DATE + 7); --throw notice
+(101, 1, 4, '22:00:00', CURRENT_DATE + 7),
+(103, 1, 4, '22:00:00', CURRENT_DATE + 7),
+(105, 1, 4, '22:00:00', CURRENT_DATE + 7),
+(107, 1, 4, '22:00:00', CURRENT_DATE + 7); --throw notice
 
 
 
