@@ -278,7 +278,7 @@ AS $$
             s.date = _date AND
             s.time = current_hour_check AND
             s.booker_eid = _booker_eid AND
-            e.resigned_date IS NOT NULL; -- Ensure only booker of the session can unbook
+            e.resigned_date IS NULL; -- Ensure only booker of the session can unbook
 
 
 
